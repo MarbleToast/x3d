@@ -1,11 +1,14 @@
-[gd_scene load_steps=9 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=10 format=3 uid="uid://dhffc1wkr2bjd"]
 
-[ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://pipe.gd" id="1_jjgbg"]
+[ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kry3j"]
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jjvhh"]
 resource_local_to_scene = true
+next_pass = SubResource("ShaderMaterial_kry3j")
 transparency = 1
 cull_mode = 2
 vertex_color_use_as_albedo = true
@@ -45,14 +48,32 @@ script = ExtResource("2_bo1nx")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 anchors_preset = -1
-anchor_right = 0.217354
-anchor_bottom = 0.242556
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 15.68
-offset_bottom = 16.04
+anchor_left = 0.008
+anchor_top = 0.015
+anchor_right = 0.226
+anchor_bottom = 0.257
+offset_left = 0.639999
+offset_top = -0.200001
+offset_right = -0.920349
+offset_bottom = 0.440491
 theme_override_constants/separation = 0
 metadata/_edit_use_anchors_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Generating aperture mesh..."
+
+[node name="ApertureProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+fill_mode = 4
+nine_patch_stretch = true
+stretch_margin_left = 50
+stretch_margin_top = 50
+texture_progress = ExtResource("5_kry3j")
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -70,14 +91,14 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer3"]
 layout_mode = 2
-text = "Generating aperture mesh..."
+text = "Generating element meshes.."
 
-[node name="ApertureProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer"]
+[node name="ElementProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
 layout_mode = 2
 fill_mode = 4
@@ -97,4 +118,31 @@ offset_left = -0.920044
 offset_top = 0.04
 offset_right = -0.640137
 offset_bottom = 0.279984
+horizontal_alignment = 2
 metadata/_edit_use_anchors_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+anchors_preset = -1
+anchor_left = 0.008
+anchor_top = 0.933
+anchor_right = 0.362
+anchor_bottom = 0.985
+offset_left = 0.639999
+offset_top = 0.359985
+offset_right = 0.959961
+offset_bottom = 0.199951
+
+[node name="Button" type="Button" parent="HBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Toggle Elements"
+
+[node name="Button2" type="Button" parent="HBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Toggle Beam"
+
+[node name="Button3" type="Button" parent="HBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Toggle Apertures"
