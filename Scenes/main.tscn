@@ -1,21 +1,28 @@
-[gd_scene load_steps=10 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=16 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
+[ext_resource type="Script" uid="uid://chk6bo0krck7c" path="res://Scenes/main.gd" id="2_21xkr"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
+[ext_resource type="Shader" uid="uid://bcb4eh5wr35xd" path="res://Scenes/xray.gdshader" id="2_jjvhh"]
+[ext_resource type="Shader" uid="uid://dxiungr6bxr7o" path="res://Scenes/main.gdshader" id="3_kry3j"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kry3j"]
+[sub_resource type="Gradient" id="Gradient_jjvhh"]
+offsets = PackedFloat32Array(0, 0.62211984, 1)
+colors = PackedColorArray(0.69981736, 0.7957657, 0.92993253, 1, 1, 1, 1, 1, 0.97574824, 0.51557976, 0.48915732, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jjvhh"]
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_kry3j"]
+gradient = SubResource("Gradient_jjvhh")
+fill_from = Vector2(1, 0)
+fill_to = Vector2(0, 1)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_kry3j"]
+viewport_path = NodePath("SubViewportContainer/SubViewport")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_21xkr"]
 resource_local_to_scene = true
-next_pass = SubResource("ShaderMaterial_kry3j")
-transparency = 1
-cull_mode = 2
-vertex_color_use_as_albedo = true
-emission = Color(0.707967, 0.707967, 0.707967, 1)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8gbba"]
-albedo_color = Color(1, 0, 1, 1)
+shader = ExtResource("3_kry3j")
+shader_parameter/accum_tex = SubResource("ViewportTexture_kry3j")
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjvhh"]
 sky_top_color = Color(0.182934, 0.441454, 0.492471, 1)
@@ -34,19 +41,54 @@ sky = SubResource("Sky_kry3j")
 ambient_light_source = 3
 tonemap_mode = 2
 
-[node name="Scene" type="Node3D"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kry3j"]
+render_priority = 0
+shader = ExtResource("2_jjvhh")
+shader_parameter/albedo = Color(0, 0, 0, 1)
+shader_parameter/do_emission = false
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8gbba"]
+albedo_color = Color(1, 0, 1, 1)
+
+[node name="Scene" type="TextureRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_kry3j")
+script = ExtResource("2_21xkr")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+material = SubResource("ShaderMaterial_21xkr")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+transparent_bg = true
+handle_input_locally = false
+use_hdr_2d = true
+size = Vector2i(1920, 1080)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 1, 0, 0)
+environment = SubResource("Environment_8gbba")
+current = true
+script = ExtResource("2_bo1nx")
 
 [node name="MeshManager" type="Node3D" parent="."]
 script = ExtResource("1_jjgbg")
-aperture_material = SubResource("StandardMaterial3D_jjvhh")
+aperture_material = SubResource("ShaderMaterial_kry3j")
 beam_material = SubResource("StandardMaterial3D_8gbba")
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 1, 0, 0)
-environment = SubResource("Environment_8gbba")
-script = ExtResource("2_bo1nx")
-
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.008
 anchor_top = 0.015
@@ -109,6 +151,7 @@ texture_progress = ExtResource("5_kry3j")
 
 [node name="ApertureInfo" type="Label" parent="."]
 unique_name_in_owner = true
+layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.826
 anchor_top = 0.012
@@ -122,6 +165,7 @@ horizontal_alignment = 2
 metadata/_edit_use_anchors_ = true
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.008
 anchor_top = 0.933

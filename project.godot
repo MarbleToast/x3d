@@ -12,7 +12,7 @@ config_version=5
 
 config/name="MeshMaker"
 run/main_scene="uid://dhffc1wkr2bjd"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -23,6 +23,7 @@ OBJExporter="*res://addons/obj_exporter/OBJExporter.tscn"
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
+window/per_pixel_transparency/allowed=true
 
 [editor_plugins]
 

@@ -63,7 +63,7 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 	}
 
 ## Parses a line of aperture vertex data from an Xsuite apertures CSV
-static func parse_edge_line(line: PackedStringArray) -> Array[Vector2]:
+static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float = 1.0) -> Array[Vector2]:
 	var points: Array[Vector2] = []
 	if len(line) < 5:
 		return points
@@ -78,7 +78,7 @@ static func parse_edge_line(line: PackedStringArray) -> Array[Vector2]:
 	points.resize(n)
 	for i in n:
 		if xs[i] != null and ys[i] != null:
-			points[i] = Vector2(xs[i], ys[i])
+			points[i] = Vector2(xs[i], ys[i]) * thickness_multiplier
 		else:
 			points[i] = Vector2.ZERO
 	return points
@@ -126,44 +126,3 @@ static func load_aperture_edge_lines(edges_path: String) -> Array[PackedStringAr
 	
 	print("Got %s aperture edges." % edges.size())
 	return edges
-
-## Builds segments of consecutive survey slices of the same type
-static func build_aperture_segments(survey_data: Array[Dictionary], edges_data: Array[PackedStringArray]) -> Array[Dictionary]:
-	print("Building segments...")
-	var segments: Array[Dictionary] = []
-	var current_type := ""
-	var current_segment := {
-		type = "", 
-		survey = [], 
-		edges = [],
-		id = "",
-	}
-
-	for i in survey_data.size():
-		var slice := survey_data[i]
-		if slice.type != current_type:
-			# Push previous segment if it's not the first line
-			if current_segment.survey.size() > 0:
-				segments.append(current_segment)
-				
-			# Start new segment
-			current_type = slice.type
-			current_segment = {
-				id = slice.id,
-				type = current_type, 
-				survey = [], 
-				edges = [] 
-			}
-		
-		var parsed_edges := parse_edge_line(edges_data[i])
-		if len(parsed_edges) == 0:
-			continue
-			
-		current_segment.survey.append(slice)
-		current_segment.edges.append(parsed_edges)
-
-	# push last
-	if current_segment.survey.size() > 0:
-		segments.append(current_segment)
-
-	return segments

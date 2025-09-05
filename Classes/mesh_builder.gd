@@ -2,14 +2,12 @@ class_name MeshBuilder
 extends RefCounted
 
 # Constants
-const APERTURE_TORUS_SCALE_FACTOR := 0.1
-const APERTURE_THICKNESS_MODIFIER := 10.0
-const BEAM_ELLIPSE_RESOLUTION := 10
-const BEAM_THICKNESS_MODIFIER := 1.0
+const BEAM_ELLIPSE_RESOLUTION := 20
+const TORUS_SCALE_FACTOR := 1.0
 
 
 ## Creates an ellipse from a parsed twiss line, with width and height according to sigma in x and y
-static func create_beam_ellipse(twiss_line: PackedStringArray) -> Array[Vector2]:
+static func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Array[Vector2]:
 	var twiss := DataLoader.parse_twiss_line(twiss_line)
 	var pts: Array[Vector2] = []
 	var center: Vector2 = twiss.position
@@ -21,25 +19,25 @@ static func create_beam_ellipse(twiss_line: PackedStringArray) -> Array[Vector2]
 		pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
 	
 	var result: Array[Vector2]
-	result.assign(pts.map(func(v): return v * BEAM_THICKNESS_MODIFIER))
+	result.assign(pts.map(func(v): return v * thickness_modifier))
 	return result
 
 
 ## Creates a prism mesh with specified number of sides, radius and length
-static func create_prism(sides: int, radius: float, length: float) -> ArrayMesh:
+static func create_prism(sides: int, radius: float, length: float, thickness_modifier: float = 1.0) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var step := TAU / float(sides)
-	var half_len := length * APERTURE_TORUS_SCALE_FACTOR * 0.5
+	var half_len := length * TORUS_SCALE_FACTOR * 0.5
 
 	# top and bottom rings
 	var top: Array[Vector3] = []
 	var bottom: Array[Vector3] = []
 	for i in sides:
 		var angle := i * step
-		var x := cos(angle) * radius * APERTURE_THICKNESS_MODIFIER
-		var y := sin(angle) * radius * APERTURE_THICKNESS_MODIFIER
+		var x := cos(angle) * radius * thickness_modifier
+		var y := sin(angle) * radius * thickness_modifier
 		top.append(Vector3(x, y, half_len))
 		bottom.append(Vector3(x, y, -half_len))
 
@@ -74,22 +72,22 @@ static func create_prism(sides: int, radius: float, length: float) -> ArrayMesh:
 
 
 ## Creates appropriate mesh based on element type
-static func create_element_mesh(type: String, length: float) -> Mesh:
+static func create_element_mesh(type: String, length: float, thickness_modifier: float = 1.0) -> Mesh:
 	match type:
 		"Drift":
 			var m := BoxMesh.new()
 			m.size = Vector3(
-				0.2 * APERTURE_THICKNESS_MODIFIER,
-				0.2 * APERTURE_THICKNESS_MODIFIER,
-				length * APERTURE_TORUS_SCALE_FACTOR
+				0.2 * thickness_modifier,
+				0.2 * thickness_modifier,
+				length * TORUS_SCALE_FACTOR
 			)
 			return m
 		"Bend", "RBend", "SimpleThinBend":
 			var m := BoxMesh.new()
 			m.size = Vector3(
-				0.3 * APERTURE_THICKNESS_MODIFIER,
-				0.3 * APERTURE_THICKNESS_MODIFIER,
-				length * APERTURE_TORUS_SCALE_FACTOR
+				0.3 * thickness_modifier,
+				0.3 * thickness_modifier,
+				length * TORUS_SCALE_FACTOR
 			)
 			return m 
 		"Quadrupole":
@@ -112,113 +110,13 @@ static func create_element_mesh(type: String, length: float) -> Mesh:
 			return m
 
 
-## Creates separate meshes for each aperture segment
-static func build_aperture_meshes(
-	segments: Array[Dictionary], 
-	progress_callback: Callable = Callable(),
-	mesh_ready_callback: Callable = Callable()
-) -> void:
-	print("Building segmented meshes...")
-	
-	# Keep track of the last processed slice and its verts (across all segments)
-	var prev_slice := {}
-	var prev_verts: Array[Vector3] = []
-	var prev_tangent := Vector3.FORWARD
-	var prev_angle_offset := 0.0
-	var has_prev := false
-	
-	for segment_index in range(segments.size()):
-		var segment = segments[segment_index]
-		var slices_data: Array = segment.survey
-		var edges_data: Array = segment.edges
-		var segment_type: String = segment.type
-		
-		var st := SurfaceTool.new()
-		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		st.set_color(ElementColors.get_element_color(segment_type))
-		
-		# Process each slice normally
-		for s in range(slices_data.size()):
-			var curr_slice: Dictionary = slices_data[s]
-			var edge_ring: Array[Vector2] = edges_data[s]
-			
-			# ---- build Frenet frame ----
-			var curr_center: Vector3 = curr_slice.center
-			var tangent: Vector3 = (curr_center - prev_slice.center) if has_prev else prev_tangent
-			if tangent.length_squared() < 1e-12:
-				tangent = prev_tangent
-			
-			var up := Vector3.UP
-			if abs(tangent.dot(up)) > 0.9:
-				up = Vector3.RIGHT
-			
-			var normal := (up - tangent * up.dot(tangent)).normalized()
-			var binormal := tangent.cross(normal).normalized()
-			if abs(curr_slice.psi) > 1e-6:
-				normal = normal.rotated(tangent, curr_slice.psi)
-				binormal = binormal.rotated(tangent, curr_slice.psi)
-			
-			prev_tangent = tangent
-			
-			# ---- build verts ----
-			var curr_verts: Array[Vector3] = []
-			for p2 in edge_ring:
-				var scaled := p2 * APERTURE_THICKNESS_MODIFIER
-				curr_verts.append(curr_center + normal * scaled.x + binormal * scaled.y)
-			
-			# ---- stitch if we have a previous ring ----
-			if has_prev and prev_verts.size() == curr_verts.size():
-				var n := curr_verts.size()
-				var ref_prev: Vector3 = prev_verts[0] - prev_slice.center
-				var ref_curr := curr_verts[0] - curr_center
-				var dot_val: float = clamp(ref_prev.dot(ref_curr), -1.0, 1.0)
-				var cross_val := tangent.dot(ref_prev.cross(ref_curr))
-				prev_angle_offset += atan2(cross_val, dot_val)
-				
-				var shift := int(round(prev_angle_offset / (TAU / float(n))))
-				var rotated: Array[Vector3] = []
-				for i in range(n):
-					rotated.append(curr_verts[(i + shift) % n])
-				curr_verts = rotated
-				
-				for j in range(n):
-					var jn = (j + 1) % n
-					st.add_vertex(prev_verts[j])
-					st.add_vertex(prev_verts[jn])
-					st.add_vertex(curr_verts[j])
-					
-					st.add_vertex(prev_verts[jn])
-					st.add_vertex(curr_verts[jn])
-					st.add_vertex(curr_verts[j])
-			
-			prev_slice = curr_slice
-			prev_verts = curr_verts
-			has_prev = true
-			
-		progress_callback.call(segment_index)
-
-		# finalize surface for this segment
-		st.index()
-		st.generate_normals()
-		st.optimize_indices_for_cache()
-		
-		if mesh_ready_callback.is_valid():
-			mesh_ready_callback.call({
-				type = segment_type,
-				arrays = st.commit(),
-				segment_index = segment_index,
-				first_id = segments[0].id
-			})
-	
-	print("Aperture mesh generation complete.")
-
-
 ## Builds box meshes for survey elements with a nonzero length and no aperture data
 static func build_box_meshes(
 	survey_data: Array[Dictionary], 
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
-	static_body_callback: Callable = Callable()
+	static_body_callback: Callable = Callable(),
+	thickness_modifier: float = 1.0
 ) -> void:
 	print("Building box meshes...")
 	
@@ -256,9 +154,9 @@ static func build_box_meshes(
 		frame.y = binormal
 		frame.z = tangent
 		
-		var box := create_element_mesh(slice.type, slice.length)
+		var box := create_element_mesh(slice.type, slice.length, thickness_modifier)
 		var mat := aperture_material.duplicate()
-		mat.albedo_color = ElementColors.get_element_color(slice.type)
+		mat.set_shader_parameter("albedo", ElementColors.get_element_color(slice.type))
 		box.surface_set_material(0, mat)
 
 		var mesh_instance := ElementMeshInstance.new()

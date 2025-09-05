@@ -1,5 +1,8 @@
 extends Node3D
 
+const APERTURE_THICKNESS_MODIFIER := 1.0
+const BEAM_THICKNESS_MODIFIER := 1.0
+
 @export var aperture_material: Material
 @export var beam_material: Material
 
@@ -18,9 +21,8 @@ extends Node3D
 @onready var toggle_apertures := $"../HBoxContainer/Button3"
 
 # Signals for coordinating threads
-signal aperture_mesh_ready(mesh_data: Dictionary)
-signal aperture_meshes_complete
-signal beam_mesh_ready(arrays: ArrayMesh)
+signal aperture_mesh_complete(mesh: ArrayMesh)
+signal beam_mesh_complete(arrays: ArrayMesh)
 signal element_meshes_complete
 
 # Thread management
@@ -31,19 +33,20 @@ var magnets_thread := Thread.new()
 
 # Mesh storage
 var beam_mesh_instance: MeshInstance3D
-var aperture_mesh_instances: Array[ElementMeshInstance] = []
+var aperture_mesh_instance: MeshInstance3D
 var length_mesh_instances: Array[StaticBody3D] = []
 
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
-			selected_aperture_mesh.mesh.surface_get_material(0).emission_enabled = false
-		value.mesh.surface_get_material(0).emission_enabled = true
+			selected_aperture_mesh.mesh.surface_get_material(0).set_shader_parameter("do_emission", false)
+		value.mesh.surface_get_material(0).set_shader_parameter("do_emission", true)
 		aperture_info.text = "%s: %s" % [value.first_slice_name, value.type]
 		selected_aperture_mesh = value
 
 
 func _ready() -> void:
+	toggle_elements.set_pressed_no_signal(true)
 	toggle_elements.toggled.connect(
 		func (val): 
 			for m in length_mesh_instances:
@@ -51,63 +54,62 @@ func _ready() -> void:
 				m.process_mode = Node.PROCESS_MODE_INHERIT if val else Node.PROCESS_MODE_DISABLED
 	)
 	
+	toggle_beam.set_pressed_no_signal(true)
 	toggle_beam.toggled.connect(
 		func (val): 
 			beam_mesh_instance.visible = val
 	)
 	
+	toggle_apertures.set_pressed_no_signal(true)
 	toggle_apertures.toggled.connect(
 		func (val): 
-			for m in aperture_mesh_instances:
-				m.visible = val
+			aperture_mesh_instance.visible = val
 	)
 	
 	var survey_data := DataLoader.load_survey("res://Data/survey.csv")
-	var edges_lines := DataLoader.load_aperture_edge_lines("res://Data/apertures.csv")
-	var aperture_segments := DataLoader.build_aperture_segments(survey_data, edges_lines)
 	
-	_setup_progress_bars(aperture_segments, survey_data)
+	_setup_progress_bars(survey_data)
 	_connect_signals()
 	
-	_start_aperture_thread(aperture_segments)
+	_start_aperture_thread(survey_data)
 	_start_beam_thread(survey_data)
 	_start_magnets_thread(survey_data)
 	_setup_export_callbacks()
 
 
-func _setup_progress_bars(aperture_segments: Array[Dictionary], survey_data: Array[Dictionary]) -> void:
-	aperture_progress.max_value = aperture_segments.size()
+func _setup_progress_bars(survey_data: Array[Dictionary]) -> void:
+	aperture_progress.max_value = survey_data.size()
 	beam_progress.max_value = survey_data.size()
 	element_progress.max_value = survey_data.size()
 
 
 func _connect_signals() -> void:
-	aperture_mesh_ready.connect(_on_aperture_mesh_ready)
-	aperture_meshes_complete.connect(_on_aperture_meshes_complete)
-	beam_mesh_ready.connect(_on_beam_mesh_ready)
+	aperture_mesh_complete.connect(_on_aperture_mesh_complete)
+	beam_mesh_complete.connect(_on_beam_mesh_complete)
 	element_meshes_complete.connect(_on_element_meshes_complete)
 
 
-func _start_aperture_thread(aperture_segments: Array[Dictionary]) -> void:
+func _start_aperture_thread(survey_data: Array[Dictionary]) -> void:
 	aperture_thread.start(func():
-		MeshBuilder.build_aperture_meshes(
-			aperture_segments,
-			func(progress: int): aperture_progress.set_value.call_deferred(progress),
-			func(mesh_data: Dictionary): aperture_mesh_ready.emit.call_deferred(mesh_data)
+		var mesh := MeshBuilder.build_sweep_mesh(
+			survey_data,
+			"res://Data/apertures.csv",
+			func(aperture_line): return DataLoader.parse_edge_line(aperture_line, APERTURE_THICKNESS_MODIFIER),
+			func(progress: int): aperture_progress.set_value.call_deferred(progress)
 		)
-		aperture_meshes_complete.emit.call_deferred()
+		aperture_mesh_complete.emit.call_deferred(mesh)
 	)
 
 
 func _start_beam_thread(survey_data: Array[Dictionary]) -> void:
 	beam_thread.start(func():
-		var arrays := MeshBuilder.build_sweep_mesh(
+		var mesh := MeshBuilder.build_sweep_mesh(
 			survey_data,
 			"res://Data/twiss.csv",
-			func(twiss_line): return MeshBuilder.create_beam_ellipse(twiss_line),
+			func(twiss_line): return MeshBuilder.create_beam_ellipse(twiss_line, BEAM_THICKNESS_MODIFIER),
 			func(progress: int): beam_progress.set_value.call_deferred(progress)
 		)
-		beam_mesh_ready.emit.call_deferred(arrays)
+		beam_mesh_complete.emit.call_deferred(mesh)
 	)
 
 
@@ -117,7 +119,8 @@ func _start_magnets_thread(survey_data: Array[Dictionary]) -> void:
 			survey_data,
 			aperture_material,
 			func(progress: int): element_progress.set_value.call_deferred(progress),
-			func(static_body: StaticBody3D): _add_box_static_body.call_deferred(static_body)
+			func(static_body: StaticBody3D): _add_box_static_body.call_deferred(static_body),
+			APERTURE_THICKNESS_MODIFIER
 		)
 		element_meshes_complete.emit.call_deferred()
 	)
@@ -138,32 +141,14 @@ func _add_box_static_body(static_body: StaticBody3D) -> void:
 	add_child(static_body)
 
 
-func _on_aperture_mesh_ready(mesh_data: Dictionary) -> void:
-	var aperture_type: String = mesh_data.type
-	var array_mesh: ArrayMesh = mesh_data.arrays
-	var segment_index: int = mesh_data.segment_index
-	var first_id: String = mesh_data.first_id
-
-	var mesh_instance := ElementMeshInstance.new()
-	mesh_instance.name = "Aperture_Segment_%d_%s_%s" % [segment_index, aperture_type, first_id]
-	array_mesh.surface_set_material(0, aperture_material.duplicate())
-	mesh_instance.mesh = array_mesh
-	mesh_instance.type = aperture_type
-	mesh_instance.first_slice_name = first_id
+func _on_aperture_mesh_complete(mesh: ArrayMesh) -> void:
+	aperture_mesh_instance = MeshInstance3D.new()
+	aperture_mesh_instance.name = "ApertureModel"
+	add_child(aperture_mesh_instance)
 	
-	var static_body := StaticBody3D.new()
-	static_body.input_event.connect(_on_aperture_mesh_clicked.bind(mesh_instance))
-	
-	var collision_shape := CollisionShape3D.new()
-	collision_shape.shape = array_mesh.create_convex_shape()
-	
-	aperture_mesh_instances.append(mesh_instance)
-	static_body.add_child(mesh_instance)
-	static_body.add_child(collision_shape)
-	add_child(static_body)
-
-
-func _on_aperture_meshes_complete() -> void:
+	mesh.surface_set_material(0, aperture_material)
+	aperture_mesh_instance.mesh = mesh
+	aperture_progress.value = aperture_progress.max_value
 	_progress_success_animation(aperture_progress_container)
 
 
@@ -180,14 +165,14 @@ func _on_aperture_mesh_clicked(
 			selected_aperture_mesh = caller
 
 
-func _on_beam_mesh_ready(arrmesh: ArrayMesh) -> void:
+func _on_beam_mesh_complete(mesh: ArrayMesh) -> void:
 	print("Beam mesh generated.")
 	beam_mesh_instance = MeshInstance3D.new()
 	beam_mesh_instance.name = "Twiss"
 	add_child(beam_mesh_instance)
 	
-	arrmesh.surface_set_material(0, beam_material)
-	beam_mesh_instance.mesh = arrmesh
+	mesh.surface_set_material(0, beam_material)
+	beam_mesh_instance.mesh = mesh
 	beam_progress.value = beam_progress.max_value
 	_progress_success_animation(beam_progress_container)
 
@@ -212,9 +197,8 @@ func _export_mesh() -> void:
 	mesh_export_thread.start(func():
 		if beam_mesh_instance:
 			OBJExporter.save_mesh_to_files(beam_mesh_instance.mesh, "user://", "mesh_export_beam")
-		for inst in aperture_mesh_instances:
-			if inst.mesh:
-				OBJExporter.save_mesh_to_files(inst.mesh, "user://", "mesh_export_%s" % inst.name)
+		if aperture_mesh_instance:
+			OBJExporter.save_mesh_to_files(aperture_mesh_instance.mesh, "user://", "mesh_export_aperture")
 	)
 
 
