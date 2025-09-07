@@ -8,8 +8,8 @@
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
 
 [sub_resource type="Gradient" id="Gradient_jjvhh"]
-offsets = PackedFloat32Array(0, 0.62211984, 1)
-colors = PackedColorArray(0.69981736, 0.7957657, 0.92993253, 1, 1, 1, 1, 1, 0.97574824, 0.51557976, 0.48915732, 1)
+offsets = PackedFloat32Array(0, 0.62212, 1)
+colors = PackedColorArray(0.699817, 0.795766, 0.929933, 1, 1, 1, 1, 1, 0.975748, 0.51558, 0.489157, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_kry3j"]
 gradient = SubResource("Gradient_jjvhh")
@@ -56,6 +56,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = SubResource("GradientTexture2D_kry3j")
 script = ExtResource("2_21xkr")
 
@@ -67,6 +68,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]

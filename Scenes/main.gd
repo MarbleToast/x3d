@@ -1,13 +1,12 @@
 extends TextureRect
 
-@onready var subviewport := $SubViewportContainer/SubViewport
+@onready var subviewport: SubViewport = $SubViewportContainer/SubViewport
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton or event is InputEventMouseMotion:
-		# Translate global mouse to SubViewport coordinates
-		var local_pos = subviewport.get_local_mouse_position()
-		# Call a function to handle picking
-		handle_subviewport_click(local_pos, event)
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			var local_pos = subviewport.get_mouse_position()
+			handle_subviewport_click(local_pos, event)
 
 
 func handle_subviewport_click(local_pos: Vector2, event: InputEvent) -> void:
@@ -15,14 +14,13 @@ func handle_subviewport_click(local_pos: Vector2, event: InputEvent) -> void:
 	if camera == null:
 		return
 	
-	# Cast a ray from camera through the mouse position
-	var from := camera.project_ray_origin(local_pos)
-	var to := from + camera.project_ray_normal(local_pos) * 1000.0
-	
-	var space_state := subviewport.get_world_3d().direct_space_state
-	var result := space_state.intersect_ray(from, to, [], 1)
+	var space_state := get_viewport().get_world_3d().direct_space_state
+	var params := PhysicsRayQueryParameters3D.new()
+	params.from = camera.project_ray_origin(local_pos)
+	params.to = params.from + camera.project_ray_normal(local_pos) * 1000.0
+	var result := space_state.intersect_ray(params)
 	
 	if result:
-		var obj := result.collider
-		if obj and obj.has_:  # Or whatever handler you use
-			obj._on_click(event)
+		var obj: StaticBody3D = result.collider
+		if obj and obj is StaticBody3D:  # Or whatever handler you use
+			obj.input_event.emit(camera, event, result.position, result.normal, result.face_index)
