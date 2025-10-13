@@ -39,8 +39,8 @@ var length_mesh_instances: Array[StaticBody3D] = []
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
-			selected_aperture_mesh.mesh.surface_get_material(0).set_shader_parameter("do_emission", false)
-		value.mesh.surface_get_material(0).set_shader_parameter("do_emission", true)
+			selected_aperture_mesh.mesh.surface_get_material(0).albedo_color /= 1.5
+		value.mesh.surface_get_material(0).albedo_color *= 1.5
 		aperture_info.text = "%s: %s" % [value.first_slice_name, value.type]
 		selected_aperture_mesh = value
 

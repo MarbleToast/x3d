@@ -97,7 +97,7 @@ static func create_element_mesh(type: String, length: float, thickness_modifier:
 		"Octupole":
 			return create_prism(8, 0.25, length) # octagon
 		"Multipole":
-			return create_prism(10, 0.25, length) # dodecagon
+			return create_prism(10, 0.25, 0) # dodecagon
 		"Solenoid":
 			var m := CylinderMesh.new()
 			m.height = length
@@ -128,18 +128,35 @@ static func build_box_meshes(
 		if slice.length <= 0.0:
 			continue
 		
+		
 		# --- Tangent calculation ---
 		var tangent: Vector3
+
+		# Calculate both incoming and outgoing tangents
+		var tangent_in: Vector3 = Vector3.FORWARD
+		var tangent_out: Vector3 = Vector3.FORWARD
+
 		if i > 0:
-			tangent = slice.center - survey_data[i - 1].center
+			tangent_in = (slice.center - survey_data[i - 1].center).normalized()
+		if i < survey_data.size() - 1:
+			tangent_out = (survey_data[i + 1].center - slice.center).normalized()
+
+		# Use average of incoming and outgoing tangents for smoother transitions
+		if i == 0:
+			tangent = tangent_out
+		elif i == survey_data.size() - 1:
+			tangent = tangent_in
 		else:
-			tangent = prev_tangent
-		
+			# Average and renormalize
+			tangent = (tangent_in + tangent_out).normalized()
+			# Handle degenerate case where tangents oppose each other
+			if tangent.length_squared() < 1e-12:
+				tangent = tangent_in
+
 		if tangent.length_squared() < 1e-12:
 			tangent = prev_tangent
 		else:
-			tangent = tangent.normalized()
-		prev_tangent = tangent  # save for next iteration
+			prev_tangent = tangent
 		
 		# --- Build Frenet-like frame ---
 		var up := Vector3.UP
@@ -154,9 +171,12 @@ static func build_box_meshes(
 		frame.y = binormal
 		frame.z = tangent
 		
+		var offset_along_tangent: Vector3 = tangent * (slice.length * TORUS_SCALE_FACTOR * 0.5)
+		var box_position: Vector3 = slice.center + offset_along_tangent
+		
 		var box := create_element_mesh(slice.type, slice.length, thickness_modifier)
-		var mat := aperture_material.duplicate()
-		mat.set_shader_parameter("albedo", ElementColors.get_element_color(slice.type))
+		var mat: Material = aperture_material.duplicate()
+		mat.albedo_color = ElementColors.get_element_color(slice.type)
 		box.surface_set_material(0, mat)
 
 		var mesh_instance := ElementMeshInstance.new()
@@ -167,7 +187,7 @@ static func build_box_meshes(
 		
 		var static_body := StaticBody3D.new()
 		static_body.name = "Box_%d_%s" % [i, slice.type]
-		static_body.transform = Transform3D(frame, slice.center)
+		static_body.transform = Transform3D(frame, box_position)
 	
 		var collision_shape := CollisionShape3D.new()
 		collision_shape.shape = box.create_convex_shape()
