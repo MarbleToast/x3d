@@ -4,6 +4,25 @@ extends RefCounted
 # Aperture constants
 const APERTURE_TORUS_SCALE_FACTOR := 1.0
 
+## Parses the survey CSV header and returns a dictionary mapping column names to indices
+static func parse_survey_header(header: PackedStringArray) -> Dictionary:
+	var column_map := {}
+	var required_columns := ["x", "y", "z", "theta", "phi", "psi", "element_type", "length", "name"]
+	
+	for i in range(header.size()):
+		var col_name := header[i].strip_edges().to_lower()
+		if col_name in required_columns:
+			column_map[col_name] = i
+	
+	# Verify all required columns were found
+	for col in required_columns:
+		if col not in column_map:
+			push_error("Required column '%s' not found in CSV header" % col)
+			return {}
+	
+	return column_map
+
+
 ## Converts a stringified Python list to a Godot array
 ##
 ## Should be fairly portable for types other than floats, and converts None to null.
@@ -21,17 +40,27 @@ static func python_list_to_godot_array(arr_str: String) -> Array:
 			result.append(str_to_var(num_str))
 	return result
 
-## Parses a line of aperture data from an Xsuite survey CSV
-static func parse_survey_line(line: PackedStringArray) -> Dictionary:
+
+## Parses a line of aperture data from an Xsuite survey CSV using the column map
+static func parse_survey_line(line: PackedStringArray, column_map: Dictionary) -> Dictionary:
 	if len(line) < 7:
 		return {}
+	
 	return {
-		center = Vector3(float(line[1]), float(line[2]), float(line[3])) * APERTURE_TORUS_SCALE_FACTOR,
-		psi = deg_to_rad(float(line[6])),
-		type = line[14],
-		length = float(line[9]),
-		id = line[7]
+		position = Vector3(
+			float(line[column_map["x"]]), 
+			float(line[column_map["y"]]), 
+			float(line[column_map["z"]])
+		) * APERTURE_TORUS_SCALE_FACTOR,
+		theta = float(line[column_map["theta"]]),
+		phi = float(line[column_map["phi"]]),
+		psi = float(line[column_map["psi"]]),
+		element_type = line[column_map["element_type"]],
+		length = float(line[column_map["length"]]),
+		name = line[column_map["name"]],
+		line = JSON.stringify(line)
 	}
+
 
 ## Parses a line of beam envelope data from an Xsuite twiss CSV
 static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
@@ -83,13 +112,19 @@ static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float
 			points[i] = Vector2.ZERO
 	return points
 
-# Reads and parses all lines from an Xsuite survey file, discarding non-usable lines
+
+## Reads and parses all lines from an Xsuite survey file, discarding non-usable lines
 static func load_survey(survey_path: String) -> Array[Dictionary]:
 	print("Loading survey data...")
 	var sf := FileAccess.open(survey_path, FileAccess.READ)
 	
-	# Skip header
-	sf.get_csv_line()
+	# Read and parse header to find column indices
+	var header := sf.get_csv_line()
+	var column_map := parse_survey_header(header)
+	
+	if column_map.is_empty():
+		push_error("Failed to parse survey CSV header - required columns not found")
+		return []
 	
 	var apertures: Array[Dictionary] = []
 	while not sf.eof_reached():
@@ -97,7 +132,7 @@ static func load_survey(survey_path: String) -> Array[Dictionary]:
 		if len(slice_line) < 5:
 			continue
 			
-		var curr_slice := parse_survey_line(slice_line)
+		var curr_slice := parse_survey_line(slice_line, column_map)
 		if curr_slice.is_empty():
 			continue
 			
@@ -105,6 +140,7 @@ static func load_survey(survey_path: String) -> Array[Dictionary]:
 	
 	print("Got %s apertures." % apertures.size())
 	return apertures
+
 
 ## Loads all lines from an Xsuite aperture file into an array
 ## 

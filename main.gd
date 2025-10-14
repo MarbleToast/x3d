@@ -36,12 +36,17 @@ var beam_mesh_instance: MeshInstance3D
 var aperture_mesh_instance: MeshInstance3D
 var length_mesh_instances: Array[StaticBody3D] = []
 
+# Paths for data files
+var survey_path: String = "res://Data/survey.csv"
+var apertures_path: String# = "res://Data/apertures.csv"
+var twiss_path: String# = "res://Data/twiss.csv"
+
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
 			selected_aperture_mesh.mesh.surface_get_material(0).albedo_color /= 1.5
 		value.mesh.surface_get_material(0).albedo_color *= 1.5
-		aperture_info.text = "%s: %s" % [value.first_slice_name, value.type]
+		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info.remove_chars("\"{}\t\\")]
 		selected_aperture_mesh = value
 
 
@@ -66,7 +71,7 @@ func _ready() -> void:
 			aperture_mesh_instance.visible = val
 	)
 	
-	var survey_data := DataLoader.load_survey("res://Data/survey.csv")
+	var survey_data := DataLoader.load_survey(survey_path)
 	
 	_setup_progress_bars(survey_data)
 	_connect_signals()
@@ -93,7 +98,7 @@ func _start_aperture_thread(survey_data: Array[Dictionary]) -> void:
 	aperture_thread.start(func():
 		var mesh := MeshBuilder.build_sweep_mesh(
 			survey_data,
-			"res://Data/apertures.csv",
+			apertures_path,
 			func(aperture_line): return DataLoader.parse_edge_line(aperture_line, APERTURE_THICKNESS_MODIFIER),
 			func(progress: int): aperture_progress.set_value.call_deferred(progress)
 		)
@@ -105,7 +110,7 @@ func _start_beam_thread(survey_data: Array[Dictionary]) -> void:
 	beam_thread.start(func():
 		var mesh := MeshBuilder.build_sweep_mesh(
 			survey_data,
-			"res://Data/twiss.csv",
+			twiss_path,
 			func(twiss_line): return MeshBuilder.create_beam_ellipse(twiss_line, BEAM_THICKNESS_MODIFIER),
 			func(progress: int): beam_progress.set_value.call_deferred(progress)
 		)
@@ -142,13 +147,15 @@ func _add_box_static_body(static_body: StaticBody3D) -> void:
 
 
 func _on_aperture_mesh_complete(mesh: ArrayMesh) -> void:
-	aperture_mesh_instance = MeshInstance3D.new()
-	aperture_mesh_instance.name = "ApertureModel"
-	add_child(aperture_mesh_instance)
-	
-	mesh.surface_set_material(0, aperture_material)
-	aperture_mesh_instance.mesh = mesh
-	aperture_progress.value = aperture_progress.max_value
+	if mesh.get_surface_count() > 0:
+		print("Aperture mesh generated.")
+		aperture_mesh_instance = MeshInstance3D.new()
+		aperture_mesh_instance.name = "ApertureModel"
+		add_child(aperture_mesh_instance)
+		
+		mesh.surface_set_material(0, aperture_material)
+		aperture_mesh_instance.mesh = mesh
+		aperture_progress.value = aperture_progress.max_value
 	_progress_success_animation(aperture_progress_container)
 
 
@@ -166,14 +173,15 @@ func _on_aperture_mesh_clicked(
 
 
 func _on_beam_mesh_complete(mesh: ArrayMesh) -> void:
-	print("Beam mesh generated.")
-	beam_mesh_instance = MeshInstance3D.new()
-	beam_mesh_instance.name = "Twiss"
-	add_child(beam_mesh_instance)
-	
-	mesh.surface_set_material(0, beam_material)
-	beam_mesh_instance.mesh = mesh
-	beam_progress.value = beam_progress.max_value
+	if mesh.get_surface_count() > 0:
+		print("Beam mesh generated.")
+		beam_mesh_instance = MeshInstance3D.new()
+		beam_mesh_instance.name = "Twiss"
+		add_child(beam_mesh_instance)
+		
+		mesh.surface_set_material(0, beam_material)
+		beam_mesh_instance.mesh = mesh
+		beam_progress.value = beam_progress.max_value
 	_progress_success_animation(beam_progress_container)
 
 

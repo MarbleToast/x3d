@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=10 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
@@ -36,6 +36,11 @@ stencil_flags = 2
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8gbba"]
 shading_mode = 0
 albedo_color = Color(1, 0, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_8gbba"]
+font_size = 20
+outline_size = 4
+outline_color = Color(0.5803623, 0.58036184, 0.5803621, 1)
 
 [node name="Scene" type="TextureRect"]
 anchors_preset = 15
@@ -76,6 +81,7 @@ layout_mode = 2
 [node name="Label" type="Label" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Generating aperture mesh..."
+label_settings = SubResource("LabelSettings_8gbba")
 
 [node name="ApertureProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -92,6 +98,7 @@ layout_mode = 2
 [node name="Label" type="Label" parent="VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 text = "Generating beam mesh..."
+label_settings = SubResource("LabelSettings_8gbba")
 
 [node name="BeamProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
@@ -108,6 +115,7 @@ layout_mode = 2
 [node name="Label" type="Label" parent="VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 text = "Generating element meshes.."
+label_settings = SubResource("LabelSettings_8gbba")
 
 [node name="ElementProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
@@ -118,19 +126,22 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="ApertureInfo" type="Label" parent="."]
+[node name="ApertureInfo" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.826
+anchor_left = 0.80308336
 anchor_top = 0.012
 anchor_right = 0.992
-anchor_bottom = 0.159
-offset_left = -0.920044
-offset_top = 0.04
-offset_right = -0.640137
-offset_bottom = 0.279984
-horizontal_alignment = 2
+anchor_bottom = 0.9849259
+offset_left = -0.92004395
+offset_top = 0.03999996
+offset_right = -0.6401367
+offset_bottom = 0.27998352
+theme_override_colors/font_outline_color = Color(0.580362, 0.5803619, 0.5803622, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
 metadata/_edit_use_anchors_ = true
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
