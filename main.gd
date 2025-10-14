@@ -38,15 +38,15 @@ var length_mesh_instances: Array[StaticBody3D] = []
 
 # Paths for data files
 var survey_path: String = "res://Data/survey.csv"
-var apertures_path: String# = "res://Data/apertures.csv"
-var twiss_path: String# = "res://Data/twiss.csv"
+var apertures_path: String = "res://Data/apertures.csv"
+var twiss_path: String = "res://Data/twiss.csv"
 
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
 			selected_aperture_mesh.mesh.surface_get_material(0).albedo_color /= 1.5
 		value.mesh.surface_get_material(0).albedo_color *= 1.5
-		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info.remove_chars("\"{}\t\\")]
+		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
 		selected_aperture_mesh = value
 
 

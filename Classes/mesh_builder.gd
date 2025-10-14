@@ -4,6 +4,107 @@ extends RefCounted
 # Constants
 const BEAM_ELLIPSE_RESOLUTION := 20
 const TORUS_SCALE_FACTOR := 1.0
+const ELEMENT_DIMENSIONS := {
+	"Drift": {"width": 0.2, "height": 0.2, "type": "box"},
+	"DriftSlice": {"width": 0.2, "height": 0.2, "type": "box"},
+	"Quadrupole": {"width": 0.3, "height": 0.3, "type": "box"},
+	"Bend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
+	"RBend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
+	"SimpleThinBend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
+	"LimitEllipse": {"radius": 0.3, "type": "circle"},
+	"UniformSolenoid": {"radius": 0.3, "type": "circle"},
+	"Solenoid": {"radius": 0.3, "type": "circle"},
+	"Sextupole": {"num_poles": 6, "pole_width": 0.2, "pole_height": 0.07, "pole_radius": 0.3, "type": "multipole"},
+	"Octupole": {"num_poles": 8, "pole_width": 0.08, "pole_height": 0.05, "pole_radius": 0.3, "type": "multipole"},
+	"Multipole": {"num_poles": 10, "pole_width": 0.07, "pole_height": 0.04, "pole_radius": 0.3, "type": "multipole"},
+	"MultipoleKick": {"num_poles": 10, "pole_width": 0.07, "pole_height": 0.04, "pole_radius": 0.3, "type": "multipole"},
+	"_default": {"width": 0.3, "height": 0.3, "type": "box"}
+}
+
+# Caches
+static var _base_material_cache := {}
+static var _collision_shape_cache := {}
+static var _basis_cache := {}
+
+
+static func get_base_material(base_material: Material, color: Color) -> Material:
+	var key := color.to_html()
+	if not _base_material_cache.has(key):
+		var mat := base_material.duplicate()
+		mat.albedo_color = color
+		_base_material_cache[key] = mat
+	return _base_material_cache[key]
+
+
+static func get_collision_shape_for_element(
+	type: String, 
+	length: float, 
+	thickness_modifier: float
+) -> Shape3D:
+	# Create unique key based on type and dimensions
+	var key := "%s_%.3f_%.3f" % [type, length, thickness_modifier]
+	
+	if _collision_shape_cache.has(key):
+		return _collision_shape_cache[key]
+	
+	var shape: Shape3D
+	var collision_length := length * TORUS_SCALE_FACTOR
+	
+	# Get element dimensions
+	var dims: Dictionary = ELEMENT_DIMENSIONS.get(type, ELEMENT_DIMENSIONS["_default"])
+	
+	match dims.type:
+		"box":
+			var box := BoxShape3D.new()
+			var w: float = dims.width * thickness_modifier
+			var h: float = dims.height * thickness_modifier
+			box.size = Vector3(w * 2.0, h * 2.0, collision_length)
+			shape = box
+			
+		"equals":
+			var box := BoxShape3D.new()
+			var w: float = dims.width * thickness_modifier
+			var bar_h: float = dims.bar_height * thickness_modifier
+			var gap: float = dims.gap * thickness_modifier
+			var total_height: float = bar_h * 2.0 + gap
+			box.size = Vector3(w * 2.0, total_height, collision_length)
+			shape = box
+			
+		"circle":
+			var cylinder := CylinderShape3D.new()
+			var r: float = dims.radius * thickness_modifier
+			cylinder.radius = r
+			cylinder.height = collision_length
+			shape = cylinder
+			
+		"multipole":
+			var cylinder := CylinderShape3D.new()
+			var pole_r: float = dims.pole_radius * thickness_modifier
+			var pole_w: float = dims.pole_width * thickness_modifier
+			cylinder.radius = pole_r + pole_w
+			cylinder.height = collision_length
+			shape = cylinder
+
+	
+	_collision_shape_cache[key] = shape
+	return shape
+
+
+## Get or create cached basis from euler angles
+static func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
+	# Round to reasonable precision to improve cache hits
+	var key := "%0.6f_%0.6f_%0.6f" % [psi, theta, phi]
+	if not _basis_cache.has(key):
+		_basis_cache[key] = Basis.from_euler(Vector3(psi, theta, phi), EULER_ORDER_XYZ)
+	return _basis_cache[key]
+
+
+## Clear all caches to free memory
+static func clear_caches() -> void:
+	_base_material_cache.clear()
+	_collision_shape_cache.clear()
+	_basis_cache.clear()
+	print("MeshBuilder caches cleared")
 
 
 ## Creates an ellipse from a parsed twiss line, with width and height according to sigma in x and y
@@ -188,13 +289,14 @@ static func create_bent_mesh(
 
 
 ## Creates appropriate bent mesh for an element based on type and cross-section
+## Now supports creating multipole with integrated kick visualization
 static func create_element_mesh(
 	type: String,
 	length: float,
 	start_rotation: Basis,
 	end_rotation: Basis,
 	thickness_modifier: float = 1.0,
-	add_caps: bool = true
+	add_caps: bool = true,
 ) -> Mesh:
 
 	var box_cross_section = func (width: float, height: float, offset: Vector2 = Vector2.ZERO) -> Array[Array]:
@@ -210,7 +312,7 @@ static func create_element_mesh(
 	var equals_sign_cross_section = func () -> Array[Array]:
 		var w := 0.3 * thickness_modifier
 		var h := 0.1 * thickness_modifier
-		var gap := 0.3 * thickness_modifier
+		var gap := 0.4 * thickness_modifier
 		return [
 			box_cross_section.call(w, h, Vector2(0, gap / 2))[0],
 			box_cross_section.call(w, h, Vector2(0, -gap / 2))[0]
@@ -245,24 +347,27 @@ static func create_element_mesh(
 		return [pts]
 	
 	var cross_section_func: Callable
-	match type:
-		"Drift", "DriftSlice":
-			add_caps = false
-			cross_section_func = box_cross_section.bind(0.2, 0.2)
-		"LimitEllipse", "UniformSolenoid", "Solenoid":
-			cross_section_func = circle_cross_section.bind(0.3)
-		"Bend", "RBend", "SimpleThinBend":
+	var dimensions: Dictionary = ELEMENT_DIMENSIONS.get(type, ELEMENT_DIMENSIONS._default)
+	
+	match dimensions.type:
+		"box":
+			cross_section_func = box_cross_section.bind(
+				dimensions.width, 
+				dimensions.height
+			)
+		"circle":
+			cross_section_func = circle_cross_section.bind(
+				dimensions.radius
+			)
+		"equals":
 			cross_section_func = equals_sign_cross_section
-		"Quadrupole":
-			cross_section_func = multi_box_cross_section.bind(4, 0.3, 0.08, 0.3)
-		"Sextupole":
-			cross_section_func = multi_box_cross_section.bind(6, 0.2, 0.07, 0.3)
-		"Octupole":
-			cross_section_func = multi_box_cross_section.bind(8, 0.08, 0.05, 0.3)
-		"Multipole", "Multipole Kick":
-			cross_section_func = multi_box_cross_section.bind(10, 0.07, 0.04, 0.3)
-		_:
-			cross_section_func = box_cross_section.bind(0.3, 0.3)
+		"multipole":
+			cross_section_func = multi_box_cross_section.bind(
+				dimensions.num_poles, 
+				dimensions.pole_width,
+				dimensions.pole_height,
+				dimensions.pole_radius,
+			)
 	
 	return create_bent_mesh(
 		cross_section_func,
@@ -287,17 +392,15 @@ static func build_box_meshes(
 	for i in range(survey_data.size()):
 		var slice := survey_data[i]
 		
-		# Turns out when you aren't converting radians to radians via deg_to_rad(), the rotations work properly
-		# So, yes, we can use simple Basis construction rather than Frenet framing from averages
-		var start_rotation := Basis.from_euler(Vector3(slice.psi, slice.theta, slice.phi), EULER_ORDER_XYZ)
+		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
+			continue
+		
+		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
 		var end_rotation := start_rotation
 
-		# Ok, we need to see if the angle for the next element is different. If it is, we need to bend.
-		# If we are bending, then we need to offset the resultant mesh's position by the arc's centre,
-		# which obviously bows out unlike the straight meshes
 		if i + 1 < len(survey_data):
 			var next_slice := survey_data[i + 1]
-			end_rotation = Basis.from_euler(Vector3(next_slice.psi, next_slice.theta, next_slice.phi), EULER_ORDER_XYZ)
+			end_rotation = get_cached_basis(next_slice.psi, next_slice.theta, next_slice.phi)
 		
 		var box_position: Vector3
 		var start_tangent := start_rotation.z
@@ -307,11 +410,8 @@ static func build_box_meshes(
 		var arc_length: float = slice.length * TORUS_SCALE_FACTOR
 	
 		if bend_angle < 1e-6 or rotation_axis.length_squared() < 1e-12:
-			# Straight = offset by half-length along tangent, nice and easy
 			box_position = slice.position + start_tangent * (arc_length * 0.5)
 		else:
-			# Bent = compute arc midpoint, find that position, offset by that
-			# this took a while to sort out
 			rotation_axis = rotation_axis.normalized()
 			var radius := arc_length / bend_angle
 			var to_center := start_tangent.cross(rotation_axis).normalized() * radius
@@ -320,6 +420,7 @@ static func build_box_meshes(
 			var mid_pos := mid_to_center - to_center
 			box_position = slice.position + mid_pos
 	
+		# Create main mesh
 		var box := create_element_mesh(
 			slice.element_type, 
 			slice.length, 
@@ -327,9 +428,10 @@ static func build_box_meshes(
 			end_rotation, 
 			thickness_modifier
 		)
-			
-		var mat: Material = aperture_material.duplicate()
-		mat.albedo_color = ElementColors.get_element_color(slice.element_type)
+
+		var color := ElementColors.get_element_color(slice.element_type)
+		var base_mat := get_base_material(aperture_material, color)
+		var mat := base_mat.duplicate()  # Each instance gets its own material
 		box.surface_set_material(0, mat)
 
 		var mesh_instance := ElementMeshInstance.new()
@@ -337,41 +439,66 @@ static func build_box_meshes(
 		mesh_instance.mesh = box
 		mesh_instance.type = slice.element_type
 		mesh_instance.first_slice_name = slice.name
-		mesh_instance.other_info = JSON.stringify(slice, "\t", false) # gotta be a better way but eh
+		mesh_instance.other_info = slice
 		
 		var static_body := StaticBody3D.new()
 		static_body.name = "Box_%d_%s" % [i, slice.element_type]
-		static_body.transform = Transform3D(Basis.IDENTITY, box_position) # mesh already rotated
+		static_body.transform = Transform3D(Basis.IDENTITY, box_position)
 	
+		# Use properly sized collision shape
 		var collision_shape := CollisionShape3D.new()
-		collision_shape.shape = box.create_convex_shape()
+		collision_shape.shape = get_collision_shape_for_element(
+			slice.element_type, 
+			slice.length, 
+			thickness_modifier
+		)
+		if collision_shape.shape is CylinderShape3D:
+			collision_shape.rotation.x = PI / 2.0
 		
 		if slice.element_type == "Multipole":
-			var kick_box := create_element_mesh(
-				"Multipole Kick", 
-				0, 
+			var kick_mesh := create_element_mesh(
+				"MultipoleKick", 
+				0.0,
 				start_rotation, 
 				end_rotation, 
-				thickness_modifier
+				thickness_modifier,
+				true
 			)
 			
-			var mat_kick: Material = aperture_material.duplicate()
-			mat_kick.albedo_color = ElementColors.get_element_color("Multipole Kick")
-			kick_box.surface_set_material(0, mat_kick)
+			# Use a distinct color for the kick indicator
+			var kick_color := ElementColors.get_element_color("MultipoleKick")
+			var kick_base_mat := get_base_material(aperture_material, kick_color)
+			var kick_mat := kick_base_mat.duplicate()
+			kick_mesh.surface_set_material(0, kick_mat)
+			
+			var kick_collision := CollisionShape3D.new()
+			kick_collision.shape = get_collision_shape_for_element(
+				"MultipoleKick",
+				0.02,  # Match the thin slice
+				thickness_modifier
+			)
+			kick_collision.position.z = -slice.length / 2
+			kick_collision.rotation.x = PI / 2.0
 			
 			var kick_instance := ElementMeshInstance.new()
 			kick_instance.name = "box"
-			kick_instance.mesh = kick_box
-			kick_instance.type = "Multipole Kick"
-			kick_instance.first_slice_name = slice.name
-			kick_instance.other_info = JSON.stringify(slice, "\t", false) # gotta be a better way but eh
+			kick_instance.mesh = kick_mesh
+			kick_instance.type = "MultipoleKick"
+			kick_instance.first_slice_name = slice.name + " (Kick)"
+			kick_instance.other_info = slice
 			kick_instance.position.z = -slice.length / 2
 			
-			var kick_collision_shape := CollisionShape3D.new()
-			kick_collision_shape.shape = kick_box.create_convex_shape()
+			var kick_body := StaticBody3D.new()
+			kick_body.name = "Box_%d_%s" % [i, slice.element_type]
+			kick_body.transform = Transform3D(Basis.IDENTITY, box_position)
 			
-			static_body.add_child(kick_instance)
-			static_body.add_child(kick_collision_shape)
+			kick_body.add_child(kick_instance)
+			kick_body.add_child(kick_collision)
+			
+			if static_body_callback.is_valid():
+				static_body_callback.call(kick_body)
+			
+			
 
 		static_body.add_child(mesh_instance)
 		static_body.add_child(collision_shape)
@@ -408,9 +535,6 @@ static func build_sweep_mesh(
 	var aperture_index := 0
 	var has_prev := false
 	var prev_verts: Array[Vector3] = []
-	var prev_type: String = survey_data[0].element_type
-
-	st.set_color(ElementColors.get_element_color(survey_data[0].element_type))
 
 	while not df.eof_reached():
 		var data_line := df.get_csv_line()
@@ -424,14 +548,10 @@ static func build_sweep_mesh(
 		var points_2d: Array[Vector2] = get_points_func.call(data_line)
 		if points_2d.is_empty():
 			continue
-			
-		if prev_type != curr_slice.element_type:
-			st.set_color(ElementColors.get_element_color(curr_slice.element_type))
-			prev_type = curr_slice.element_type
 
-		# Compute the local basis from the Euler angles in the survey data
+		# Use cached basis
 		var curr_center: Vector3 = curr_slice.position
-		var curr_rotation := Basis.from_euler(Vector3(curr_slice.psi, curr_slice.theta, curr_slice.phi), EULER_ORDER_XYZ)
+		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
 		
 		# Build vertices in 3D space using the local basis
 		var curr_verts: Array[Vector3] = []
@@ -454,7 +574,8 @@ static func build_sweep_mesh(
 		prev_verts = curr_verts
 		has_prev = true
 		
-		progress_callback.call(aperture_index)
+		if progress_callback.is_valid():
+			progress_callback.call(aperture_index)
 
 	st.index()
 	st.generate_normals()
