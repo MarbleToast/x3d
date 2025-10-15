@@ -1,32 +1,55 @@
+## This bad boy handles all the mesh generation for visualisation purposes
 class_name MeshBuilder
 extends RefCounted
 
-# Constants
+# ====================== Constants
+## How many vertices make up one cross-section of the beam?
 const BEAM_ELLIPSE_RESOLUTION := 20
+
+## When considering the overall size of the accelerator, what should we scale the overall length of the torus?
 const TORUS_SCALE_FACTOR := 1.0
+
+## Holds each notable element's properties for visualisation.
+## [br]
+## [br]type [box, equals, circle, multipole] = the cross section type
+## [br]width [box, equals] = the transverse width of the cross-section
+## [br]height [box] = the transverse height of the cross-section 
+## [br]bar_height [equals] = how thick each bar should be in an equals cross-section
+## [br]gap [equals] = how tall the gap should be in an equals cross-section
+## [br]radius [circle] = the radius of a circle cross-section
+## [br]num_poles [multibox] = how many disjoint boxes should there be radially in the cross-section
+## [br]pole_width [multibox] = how wide a dijoint box should be
+## [br]pole_height [multibox] = how tall a dijoint box should be
+## [br]pole_radius [multibox] = how far out from the centre should a pole be
 const ELEMENT_DIMENSIONS := {
-	"Drift": {"width": 0.2, "height": 0.2, "type": "box"},
-	"DriftSlice": {"width": 0.2, "height": 0.2, "type": "box"},
-	"Quadrupole": {"width": 0.3, "height": 0.3, "type": "box"},
-	"Bend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
-	"RBend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
-	"SimpleThinBend": {"width": 0.3, "bar_height": 0.1, "gap": 0.3, "type": "equals"},
-	"LimitEllipse": {"radius": 0.3, "type": "circle"},
-	"UniformSolenoid": {"radius": 0.3, "type": "circle"},
-	"Solenoid": {"radius": 0.3, "type": "circle"},
-	"Sextupole": {"num_poles": 6, "pole_width": 0.2, "pole_height": 0.07, "pole_radius": 0.3, "type": "multipole"},
-	"Octupole": {"num_poles": 8, "pole_width": 0.08, "pole_height": 0.05, "pole_radius": 0.3, "type": "multipole"},
-	"Multipole": {"num_poles": 10, "pole_width": 0.07, "pole_height": 0.04, "pole_radius": 0.3, "type": "multipole"},
-	"MultipoleKick": {"num_poles": 10, "pole_width": 0.07, "pole_height": 0.04, "pole_radius": 0.3, "type": "multipole"},
-	"_default": {"width": 0.3, "height": 0.3, "type": "box"}
+	Drift = { width = 0.2, height = 0.2, type = "box" },
+	DriftSlice = { width = 0.2, height = 0.2, type = "box" },
+	Quadrupole = { width = 0.3, height = 0.3, type = "box" },
+	Bend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
+	RBend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
+	SimpleThinBend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
+	LimitEllipse = { radius = 0.3, type = "circle" },
+	UniformSolenoid = { radius = 0.3, type = "circle" },
+	Solenoid = { radius = 0.3, type = "circle" },
+	Sextupole = { num_poles = 6, pole_width = 0.2, pole_height = 0.07, pole_radius = 0.3, type = "multipole" },
+	Octupole = { num_poles = 8, pole_width = 0.08, pole_height = 0.05, pole_radius = 0.3, type = "multipole" },
+	Multipole = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
+	MultipoleKick = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
+	_default = { width = 0.3, height = 0.3, type = "box" }
 }
 
-# Caches
+# ===================== Caches
+## Stores materials for each element rather than duplicating and setting colour each element
 static var _base_material_cache := {}
+
+## Stores similar collision shapes so they don't need to be regenerated
 static var _collision_shape_cache := {}
+
+## 
 static var _basis_cache := {}
 
 
+## 
 static func get_base_material(base_material: Material, color: Color) -> Material:
 	var key := color.to_html()
 	if not _base_material_cache.has(key):
@@ -393,7 +416,7 @@ static func build_box_meshes(
 		var slice := survey_data[i]
 		
 		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
-			continue
+			pass
 		
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
 		var end_rotation := start_rotation
@@ -448,7 +471,7 @@ static func build_box_meshes(
 		# Use properly sized collision shape
 		var collision_shape := CollisionShape3D.new()
 		collision_shape.shape = get_collision_shape_for_element(
-			slice.element_type, 
+			ELEMENT_DIMENSIONS.get(slice.element_type, ELEMENT_DIMENSIONS._default).type, 
 			slice.length, 
 			thickness_modifier
 		)
@@ -465,7 +488,6 @@ static func build_box_meshes(
 				true
 			)
 			
-			# Use a distinct color for the kick indicator
 			var kick_color := ElementColors.get_element_color("MultipoleKick")
 			var kick_base_mat := get_base_material(aperture_material, kick_color)
 			var kick_mat := kick_base_mat.duplicate()
@@ -510,6 +532,9 @@ static func build_box_meshes(
 			progress_callback.call(i)
 	
 	print("Box mesh generation complete.")
+	print("Created %s collision polyhedrons, %s materials, and %s transformation bases." % [
+		len(_collision_shape_cache), len(_base_material_cache), len(_basis_cache)
+	])
 
 
 ## Creates a SurfaceTool and populates it with toroidal data, to be committed to an ArrayMesh or to arrays
