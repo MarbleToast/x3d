@@ -44,8 +44,26 @@ var twiss_path: String = "res://Data/twiss.csv"
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
-			selected_aperture_mesh.mesh.surface_get_material(0).albedo_color /= 1.5
-		value.mesh.surface_get_material(0).albedo_color *= 1.5
+			var old_mat := selected_aperture_mesh.mesh.surface_get_material(0) as StandardMaterial3D
+			var old_color := old_mat.albedo_color
+			old_color = Color(
+				old_color.r / 10,
+				old_color.g / 10,
+				old_color.b / 10,
+				old_color.a
+			)
+			old_mat.albedo_color = old_color
+
+		var new_mat := value.mesh.surface_get_material(0) as StandardMaterial3D
+		var new_color := new_mat.albedo_color
+		new_color = Color(
+			new_color.r * 10,
+			new_color.g * 10,
+			new_color.b * 10,
+			new_color.a
+		)
+		new_mat.albedo_color = new_color
+
 		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
 		selected_aperture_mesh = value
 

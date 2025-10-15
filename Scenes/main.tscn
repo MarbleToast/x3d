@@ -29,13 +29,18 @@ cull_mode = 2
 depth_draw_mode = 2
 shading_mode = 0
 albedo_color = Color(0.43137255, 0.43137255, 0.43137255, 0.7019608)
+grow_amount = 2.176
+point_size = 5.0
 proximity_fade_distance = 0.05
 distance_fade_max_distance = 1.0
 stencil_flags = 2
+stencil_outline_thickness = 0.046
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8gbba"]
 shading_mode = 0
 albedo_color = Color(1, 0, 1, 1)
+stencil_flags = 2
+stencil_color = Color(0.50966626, 0.21255118, 0.6443313, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_8gbba"]
 font_size = 20

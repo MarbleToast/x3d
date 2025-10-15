@@ -31,41 +31,44 @@ const ELEMENT_DIMENSIONS := {
 	LimitEllipse = { radius = 0.3, type = "circle" },
 	UniformSolenoid = { radius = 0.3, type = "circle" },
 	Solenoid = { radius = 0.3, type = "circle" },
-	Sextupole = { num_poles = 6, pole_width = 0.2, pole_height = 0.07, pole_radius = 0.3, type = "multipole" },
+	Sextupole = { num_poles = 6, pole_width = 0.12, pole_height = 0.07, pole_radius = 0.3, type = "multipole" },
 	Octupole = { num_poles = 8, pole_width = 0.08, pole_height = 0.05, pole_radius = 0.3, type = "multipole" },
 	Multipole = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
 	MultipoleKick = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
 	_default = { width = 0.3, height = 0.3, type = "box" }
 }
 
-# ===================== Caches
+# ===================== Caches and getters
 ## Stores materials for each element rather than duplicating and setting colour each element
 static var _base_material_cache := {}
 
 ## Stores similar collision shapes so they don't need to be regenerated
 static var _collision_shape_cache := {}
 
-## 
+## Stores Basis instances that could be shared rather than recreating them (eg. for straight sections)
 static var _basis_cache := {}
 
 
-## 
-static func get_base_material(base_material: Material, color: Color) -> Material:
-	var key := color.to_html()
+## Returns material instance for given colour, either from cache or newly created
+static func get_base_material(base_material: Material, colour: Color) -> Material:
+	var key := colour.to_html()
 	if not _base_material_cache.has(key):
 		var mat := base_material.duplicate()
-		mat.albedo_color = color
+		mat.albedo_color = colour
 		_base_material_cache[key] = mat
 	return _base_material_cache[key]
 
 
+## Returns collision shape instance for given type and length, either from cache or newly created
 static func get_collision_shape_for_element(
 	type: String, 
 	length: float, 
 	thickness_modifier: float
 ) -> Shape3D:
-	# Create unique key based on type and dimensions
-	var key := "%s_%.3f_%.3f" % [type, length, thickness_modifier]
+	# Create key based on type and dimensions - this needs to be element type because otherwise
+	# all multipoles and multipole kicks have the same key, leading to weird colliders
+	# 3 d.p on length to increase cache hits (and that level of accuracy is fine)
+	var key := "%s_%.3f_%f" % [type, length, thickness_modifier]
 	
 	if _collision_shape_cache.has(key):
 		return _collision_shape_cache[key]
@@ -73,7 +76,6 @@ static func get_collision_shape_for_element(
 	var shape: Shape3D
 	var collision_length := length * TORUS_SCALE_FACTOR
 	
-	# Get element dimensions
 	var dims: Dictionary = ELEMENT_DIMENSIONS.get(type, ELEMENT_DIMENSIONS["_default"])
 	
 	match dims.type:
@@ -107,16 +109,15 @@ static func get_collision_shape_for_element(
 			cylinder.radius = pole_r + pole_w
 			cylinder.height = collision_length
 			shape = cylinder
-
 	
 	_collision_shape_cache[key] = shape
 	return shape
 
 
-## Get or create cached basis from euler angles
+## Returns basis instance for given Euler angles, either from cache or newly created
 static func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
 	# Round to reasonable precision to improve cache hits
-	var key := "%0.6f_%0.6f_%0.6f" % [psi, theta, phi]
+	var key := "%.2f_%.2f_%.2f" % [psi, theta, phi]
 	if not _basis_cache.has(key):
 		_basis_cache[key] = Basis.from_euler(Vector3(psi, theta, phi), EULER_ORDER_XYZ)
 	return _basis_cache[key]
@@ -344,7 +345,7 @@ static func create_element_mesh(
 	var multi_box_cross_section = func (num_poles: int, width: float, height: float, radius: float) -> Array[Array]:
 		var polys: Array[Array] = []
 		for i in num_poles:
-			var angle := TAU * (float(i) + 1) / float(num_poles)
+			var angle := TAU * float(i) / num_poles + TAU / (2 * num_poles)
 			var offset := Vector2(cos(angle), sin(angle)) * radius * thickness_modifier
 			var w := width * thickness_modifier
 			var h := height * thickness_modifier
@@ -415,9 +416,6 @@ static func build_box_meshes(
 	for i in range(survey_data.size()):
 		var slice := survey_data[i]
 		
-		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
-			pass
-		
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
 		var end_rotation := start_rotation
 
@@ -452,8 +450,8 @@ static func build_box_meshes(
 			thickness_modifier
 		)
 
-		var color := ElementColors.get_element_color(slice.element_type)
-		var base_mat := get_base_material(aperture_material, color)
+		var colour := ElementColors.get_element_color(slice.element_type)
+		var base_mat := get_base_material(aperture_material, colour)
 		var mat := base_mat.duplicate()  # Each instance gets its own material
 		box.surface_set_material(0, mat)
 
@@ -467,11 +465,10 @@ static func build_box_meshes(
 		var static_body := StaticBody3D.new()
 		static_body.name = "Box_%d_%s" % [i, slice.element_type]
 		static_body.transform = Transform3D(Basis.IDENTITY, box_position)
-	
-		# Use properly sized collision shape
+		
 		var collision_shape := CollisionShape3D.new()
 		collision_shape.shape = get_collision_shape_for_element(
-			ELEMENT_DIMENSIONS.get(slice.element_type, ELEMENT_DIMENSIONS._default).type, 
+			slice.element_type, 
 			slice.length, 
 			thickness_modifier
 		)
@@ -496,7 +493,7 @@ static func build_box_meshes(
 			var kick_collision := CollisionShape3D.new()
 			kick_collision.shape = get_collision_shape_for_element(
 				"MultipoleKick",
-				0.02,  # Match the thin slice
+				0.02,
 				thickness_modifier
 			)
 			kick_collision.position.z = -slice.length / 2
@@ -519,8 +516,6 @@ static func build_box_meshes(
 			
 			if static_body_callback.is_valid():
 				static_body_callback.call(kick_body)
-			
-			
 
 		static_body.add_child(mesh_instance)
 		static_body.add_child(collision_shape)
@@ -566,7 +561,7 @@ static func build_sweep_mesh(
 		if len(data_line) < 5:
 			continue
 
-		var curr_slice := survey_data[aperture_index]
+		var curr_slice := survey_data[aperture_index % len(survey_data)]
 		aperture_index += 1
 
 		# Get the 2D cross-section points via callback
