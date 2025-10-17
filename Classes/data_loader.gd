@@ -116,7 +116,12 @@ static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float
 ## Reads and parses all lines from an Xsuite survey file, discarding non-usable lines
 static func load_survey(survey_path: String) -> Array[Dictionary]:
 	print("Loading survey data...")
+		
 	var sf := FileAccess.open(survey_path, FileAccess.READ)
+	
+	if not sf:
+		push_warning("Couldn't open survey file.")
+		return []
 	
 	# Read and parse header to find column indices
 	var header := sf.get_csv_line()
@@ -126,7 +131,7 @@ static func load_survey(survey_path: String) -> Array[Dictionary]:
 		push_error("Failed to parse survey CSV header - required columns not found")
 		return []
 	
-	var apertures: Array[Dictionary] = []
+	var elements: Array[Dictionary] = []
 	while not sf.eof_reached():
 		var slice_line := sf.get_csv_line()
 		if len(slice_line) < 5:
@@ -136,29 +141,28 @@ static func load_survey(survey_path: String) -> Array[Dictionary]:
 		if curr_slice.is_empty():
 			continue
 			
-		apertures.append(curr_slice)
+		elements.append(curr_slice)
 	
-	print("Got %s apertures." % apertures.size())
-	return apertures
+	print("Got %s elements." % elements.size())
+	return elements
 
 
-## Loads all lines from an Xsuite aperture file into an array
-## 
-## We need to have all lines because parse_edge_line() discards lines without vertex data,
-## meaning we would drop out of sync with the survey file when creating aperture segments 
-static func load_aperture_edge_lines(edges_path: String) -> Array[PackedStringArray]:
-	print("Loading edge data...")
-	var ef := FileAccess.open(edges_path, FileAccess.READ)
+## Loads all lines from a CSV into an array
+static func load_csv(path: String) -> Array[PackedStringArray]:
+	var content: Array[PackedStringArray] = []
 
-	# Skip header
-	ef.get_csv_line()
-	
-	var edges: Array[PackedStringArray] = []
-	while not ef.eof_reached():
-		var edges_line := ef.get_csv_line()
-		if len(edges_line) < 5:
-			continue
-		edges.append(edges_line)
-	
-	print("Got %s aperture edges." % edges.size())
-	return edges
+	var df := FileAccess.open(path, FileAccess.READ)
+	if df == null:
+		return content
+	df.get_csv_line()
+	while not df.eof_reached():
+		var line := df.get_csv_line()
+		if line.size() >= 5:
+			content.append(line)
+	df.close()
+		
+	return content
+
+
+static func has_loaded_file_on_web(file_key: String) -> bool:
+	return JavaScriptBridge.get_interface("fileContents")[file_key] != null

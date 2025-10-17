@@ -6,19 +6,19 @@ const BEAM_THICKNESS_MODIFIER := 1.0
 @export var aperture_material: Material
 @export var beam_material: Material
 
-@onready var aperture_progress_container := $"../VBoxContainer/HBoxContainer"
-@onready var beam_progress_container := $"../VBoxContainer/HBoxContainer2"
-@onready var element_progress_container := $"../VBoxContainer/HBoxContainer3"
+@export var aperture_progress_container: Container
+@export var beam_progress_container: Container
+@export var element_progress_container: Container
 
-@onready var aperture_progress := %ApertureProgress
-@onready var beam_progress := %BeamProgress
-@onready var element_progress := %ElementProgress
+@export var aperture_progress: TextureProgressBar
+@export var beam_progress: TextureProgressBar
+@export var element_progress: TextureProgressBar
 
-@onready var aperture_info := %ApertureInfo
+@export var aperture_info: RichTextLabel
 
-@onready var toggle_elements := $"../HBoxContainer/Button"
-@onready var toggle_beam := $"../HBoxContainer/Button2"
-@onready var toggle_apertures := $"../HBoxContainer/Button3"
+@export var toggle_elements: Button
+@export var toggle_beam: Button
+@export var toggle_apertures: Button
 
 # Signals for coordinating threads
 signal aperture_mesh_complete(mesh: ArrayMesh)
@@ -26,10 +26,10 @@ signal beam_mesh_complete(arrays: ArrayMesh)
 signal element_meshes_complete
 
 # Thread management
-var mesh_export_thread := Thread.new()
-var aperture_thread := Thread.new()
-var beam_thread := Thread.new()
-var magnets_thread := Thread.new()
+var mesh_export_thread: Thread
+var aperture_thread: Thread
+var beam_thread: Thread
+var magnets_thread: Thread
 
 # Mesh storage
 var beam_mesh_instance: MeshInstance3D
@@ -37,9 +37,9 @@ var aperture_mesh_instance: MeshInstance3D
 var length_mesh_instances: Array[StaticBody3D] = []
 
 # Paths for data files
-var survey_path: String = "res://Data/survey.csv"
-var apertures_path: String = "res://Data/apertures.csv"
-var twiss_path: String = "res://Data/twiss.csv"
+var survey_path: String
+var apertures_path: String
+var twiss_path: String
 
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
@@ -67,7 +67,6 @@ var selected_aperture_mesh: ElementMeshInstance:
 		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
 		selected_aperture_mesh = value
 
-
 func _ready() -> void:
 	toggle_elements.set_pressed_no_signal(true)
 	toggle_elements.toggled.connect(
@@ -80,27 +79,45 @@ func _ready() -> void:
 	toggle_beam.set_pressed_no_signal(true)
 	toggle_beam.toggled.connect(
 		func (val): 
-			beam_mesh_instance.visible = val
+			if beam_mesh_instance:
+				beam_mesh_instance.visible = val
 	)
 	
 	toggle_apertures.set_pressed_no_signal(true)
 	toggle_apertures.toggled.connect(
-		func (val): 
-			aperture_mesh_instance.visible = val
+		func (val):
+			if aperture_mesh_instance:
+				aperture_mesh_instance.visible = val
 	)
 	
-	var survey_data := DataLoader.load_survey(survey_path)
-	
-	_setup_progress_bars(survey_data)
 	_connect_signals()
-	
-	_start_aperture_thread(survey_data)
-	_start_beam_thread(survey_data)
-	_start_magnets_thread(survey_data)
 	_setup_export_callbacks()
 
 
+func setup() -> void:
+	start_building(DataLoader.load_survey(survey_path))
+
+
+func start_building(survey_data: Array[Dictionary]) -> void:
+	if survey_data:
+		for c in get_children():
+			c.queue_free()
+		
+		_setup_progress_bars(survey_data)
+		
+		if OS.has_feature("web"):
+			pass
+		else:
+			_start_aperture_thread(survey_data)
+			_start_beam_thread(survey_data)
+		
+		_start_magnets_thread(survey_data)
+
+
 func _setup_progress_bars(survey_data: Array[Dictionary]) -> void:
+	aperture_progress_container.visible = true
+	beam_progress_container.visible = true
+	element_progress_container.visible = true
 	aperture_progress.max_value = survey_data.size()
 	beam_progress.max_value = survey_data.size()
 	element_progress.max_value = survey_data.size()
@@ -113,10 +130,12 @@ func _connect_signals() -> void:
 
 
 func _start_aperture_thread(survey_data: Array[Dictionary]) -> void:
+	aperture_thread = Thread.new()
+	
 	aperture_thread.start(func():
 		var mesh := MeshBuilder.build_sweep_mesh(
 			survey_data,
-			apertures_path,
+			DataLoader.load_csv(apertures_path),
 			func(aperture_line): return DataLoader.parse_edge_line(aperture_line, APERTURE_THICKNESS_MODIFIER),
 			func(progress: int): aperture_progress.set_value.call_deferred(progress)
 		)
@@ -125,10 +144,11 @@ func _start_aperture_thread(survey_data: Array[Dictionary]) -> void:
 
 
 func _start_beam_thread(survey_data: Array[Dictionary]) -> void:
+	beam_thread = Thread.new()
 	beam_thread.start(func():
 		var mesh := MeshBuilder.build_sweep_mesh(
 			survey_data,
-			twiss_path,
+			DataLoader.load_csv(twiss_path),
 			func(twiss_line): return MeshBuilder.create_beam_ellipse(twiss_line, BEAM_THICKNESS_MODIFIER),
 			func(progress: int): beam_progress.set_value.call_deferred(progress)
 		)
@@ -137,6 +157,7 @@ func _start_beam_thread(survey_data: Array[Dictionary]) -> void:
 
 
 func _start_magnets_thread(survey_data: Array[Dictionary]) -> void:
+	magnets_thread = Thread.new()
 	magnets_thread.start(func():
 		MeshBuilder.build_box_meshes(
 			survey_data,
@@ -174,6 +195,7 @@ func _on_aperture_mesh_complete(mesh: ArrayMesh) -> void:
 		mesh.surface_set_material(0, aperture_material)
 		aperture_mesh_instance.mesh = mesh
 		aperture_progress.value = aperture_progress.max_value
+	aperture_thread.wait_to_finish()
 	_progress_success_animation(aperture_progress_container)
 
 
@@ -200,17 +222,20 @@ func _on_beam_mesh_complete(mesh: ArrayMesh) -> void:
 		mesh.surface_set_material(0, beam_material)
 		beam_mesh_instance.mesh = mesh
 		beam_progress.value = beam_progress.max_value
+	beam_thread.wait_to_finish()
 	_progress_success_animation(beam_progress_container)
 
 
 func _on_element_meshes_complete() -> void:
+	magnets_thread.wait_to_finish()
 	_progress_success_animation(element_progress_container)
 
 
 func _progress_success_animation(container: Container) -> void:
 	container.modulate = Color.LIME_GREEN
 	await get_tree().create_tween().tween_property(container, "modulate", Color.TRANSPARENT, 2.0).finished
-	container.queue_free()
+	container.visible = false
+	container.modulate = Color.WHITE
 
 
 func _input(event: InputEvent) -> void:
@@ -229,11 +254,14 @@ func _export_mesh() -> void:
 
 
 func _exit_tree() -> void:
-	if aperture_thread.is_started():
+	if aperture_thread and aperture_thread.is_started():
 		aperture_thread.wait_to_finish()
-	if beam_thread.is_started():
+		
+	if beam_thread and beam_thread.is_started():
 		beam_thread.wait_to_finish()
-	if mesh_export_thread.is_started():
+		
+	if mesh_export_thread and mesh_export_thread.is_started():
 		mesh_export_thread.wait_to_finish()
-	if magnets_thread.is_started():
+		
+	if magnets_thread and magnets_thread.is_started():
 		magnets_thread.wait_to_finish()

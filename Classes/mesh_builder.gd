@@ -535,32 +535,18 @@ static func build_box_meshes(
 ## Creates a SurfaceTool and populates it with toroidal data, to be committed to an ArrayMesh or to arrays
 static func build_sweep_mesh(
 	survey_data: Array[Dictionary], 
-	data_path: String, 
+	line_data: Array[PackedStringArray], 
 	get_points_func: Callable, 
 	progress_callback: Callable = Callable()
 ) -> ArrayMesh:
-	print("Building mesh from %s..." % data_path)
-	
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
-	var df := FileAccess.open(data_path, FileAccess.READ)
-	if df == null:
-		push_error("Could not open data CSV file.")
-		return ArrayMesh.new()
-		
-	# Skip headers
-	df.get_csv_line()
 	
-	var aperture_index := 0
 	var has_prev := false
 	var prev_verts: Array[Vector3] = []
 
-	while not df.eof_reached():
-		var data_line := df.get_csv_line()
-		if len(data_line) < 5:
-			continue
-
+	for aperture_index in range(len(line_data)):
+		var data_line := line_data[aperture_index]
 		var curr_slice := survey_data[aperture_index % len(survey_data)]
 		aperture_index += 1
 

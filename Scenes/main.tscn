@@ -1,7 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=12 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
+[ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://import_file_dialog.gd" id="4_jjvhh"]
+[ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://import.gd" id="4_kry3j"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjvhh"]
@@ -61,35 +63,46 @@ environment = SubResource("Environment_8gbba")
 current = true
 script = ExtResource("2_bo1nx")
 
-[node name="MeshManager" type="Node3D" parent="."]
+[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures")]
 script = ExtResource("1_jjgbg")
 aperture_material = SubResource("StandardMaterial3D_kry3j")
 beam_material = SubResource("StandardMaterial3D_8gbba")
+aperture_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer")
+beam_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer2")
+element_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer3")
+aperture_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer/ApertureProgress")
+beam_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer2/BeamProgress")
+element_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer3/ElementProgress")
+aperture_info = NodePath("../LoadedLayer/ApertureInfo")
+toggle_elements = NodePath("../LoadedLayer/HBoxContainer/ToggleElements")
+toggle_beam = NodePath("../LoadedLayer/HBoxContainer/ToggleBeam")
+toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/ToggleAperture")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
-layout_mode = 1
+[node name="LoadedLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
 anchor_left = 0.008
 anchor_top = 0.015
 anchor_right = 0.226
 anchor_bottom = 0.257
-offset_left = 0.639999
-offset_top = -0.200001
-offset_right = -0.920349
-offset_bottom = 0.440491
+offset_left = 0.6399994
+offset_top = -0.20000076
+offset_right = -0.9203491
+offset_bottom = 0.44049072
 theme_override_constants/separation = 0
 metadata/_edit_use_anchors_ = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="LoadedLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Generating aperture mesh..."
 label_settings = SubResource("LabelSettings_8gbba")
 
-[node name="ApertureProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
+[node name="ApertureProgress" type="TextureProgressBar" parent="LoadedLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 fill_mode = 4
 nine_patch_stretch = true
@@ -97,16 +110,15 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="LoadedLayer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer2"]
+[node name="Label" type="Label" parent="LoadedLayer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 text = "Generating beam mesh..."
 label_settings = SubResource("LabelSettings_8gbba")
 
-[node name="BeamProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer2"]
-unique_name_in_owner = true
+[node name="BeamProgress" type="TextureProgressBar" parent="LoadedLayer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 fill_mode = 4
 nine_patch_stretch = true
@@ -114,16 +126,15 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="LoadedLayer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="LoadedLayer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 text = "Generating element meshes.."
 label_settings = SubResource("LabelSettings_8gbba")
 
-[node name="ElementProgress" type="TextureProgressBar" parent="VBoxContainer/HBoxContainer3"]
-unique_name_in_owner = true
+[node name="ElementProgress" type="TextureProgressBar" parent="LoadedLayer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 fill_mode = 4
 nine_patch_stretch = true
@@ -131,9 +142,7 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="ApertureInfo" type="RichTextLabel" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
+[node name="ApertureInfo" type="RichTextLabel" parent="LoadedLayer"]
 anchors_preset = -1
 anchor_left = 0.80308336
 anchor_top = 0.012
@@ -142,36 +151,158 @@ anchor_bottom = 0.9849259
 offset_left = -0.92004395
 offset_top = 0.03999996
 offset_right = -0.6401367
-offset_bottom = 0.27998352
+offset_bottom = 0.2800293
 theme_override_colors/font_outline_color = Color(0.580362, 0.5803619, 0.5803622, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 metadata/_edit_use_anchors_ = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
-layout_mode = 1
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
 anchor_left = 0.008
 anchor_top = 0.933
 anchor_right = 0.362
 anchor_bottom = 0.985
-offset_left = 0.639999
-offset_top = 0.359985
-offset_right = 0.959961
-offset_bottom = 0.199951
+offset_left = 0.6399994
+offset_top = 0.35998535
+offset_right = 0.95996094
+offset_bottom = 0.19995117
 
-[node name="Button" type="Button" parent="HBoxContainer"]
+[node name="ToggleElements" type="Button" parent="LoadedLayer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Elements"
 
-[node name="Button2" type="Button" parent="HBoxContainer"]
+[node name="ToggleBeam" type="Button" parent="LoadedLayer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Beam"
 
-[node name="Button3" type="Button" parent="HBoxContainer"]
+[node name="ToggleAperture" type="Button" parent="LoadedLayer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Apertures"
+
+[node name="ToggleImport" type="Button" parent="LoadedLayer/HBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Show Import Menu"
+
+[node name="ImportMenu" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -150.0
+offset_right = 400.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="ImportMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ImportMenu/MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="RichTextLabel" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+bbcode_enabled = true
+text = "Survey File [color=RED]*[/color]"
+fit_content = true
+scroll_active = false
+
+[node name="LineEditSurvey" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BrowseSurvey" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Browse..."
+
+[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "and"
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Aperture File"
+
+[node name="LineEditAperture" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BrowseAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Browse..."
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Twiss File"
+
+[node name="LineEditTwiss" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BrowseTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+text = "Browse..."
+
+[node name="Import" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("mesh_manager", "line_edit_aperture", "line_edit_survey", "line_edit_twiss", "visualiser_canvas_layer", "menu_container", "error_text")]
+layout_mode = 2
+text = "Import"
+script = ExtResource("4_kry3j")
+mesh_manager = NodePath("../../../../MeshManager")
+line_edit_aperture = NodePath("../HBoxContainer/LineEditAperture")
+line_edit_survey = NodePath("../HBoxContainer2/LineEditSurvey")
+line_edit_twiss = NodePath("../HBoxContainer3/LineEditTwiss")
+visualiser_canvas_layer = NodePath("../../../../LoadedLayer")
+menu_container = NodePath("../../..")
+error_text = NodePath("../ErrorText")
+
+[node name="ErrorText" type="RichTextLabel" parent="ImportMenu/MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="FileDialog" type="FileDialog" parent="ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss")]
+oversampling_override = 1.0
+title = "Open a File"
+initial_position = 1
+file_mode = 0
+filters = PackedStringArray("*.csv,*.tfs")
+use_native_dialog = true
+script = ExtResource("4_jjvhh")
+line_edit_aperture = NodePath("../MarginContainer/VBoxContainer/HBoxContainer/LineEditAperture")
+line_edit_survey = NodePath("../MarginContainer/VBoxContainer/HBoxContainer2/LineEditSurvey")
+line_edit_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/LineEditTwiss")
+
+[connection signal="pressed" from="LoadedLayer/HBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss" to="ImportMenu/FileDialog" method="_on_browse_twiss_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/Import" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_pressed"]
+[connection signal="file_selected" from="ImportMenu/FileDialog" to="ImportMenu/FileDialog" method="_on_file_selected"]
