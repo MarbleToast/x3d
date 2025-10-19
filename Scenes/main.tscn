@@ -63,7 +63,7 @@ environment = SubResource("Environment_8gbba")
 current = true
 script = ExtResource("2_bo1nx")
 
-[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures")]
+[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
 script = ExtResource("1_jjgbg")
 aperture_material = SubResource("StandardMaterial3D_kry3j")
 beam_material = SubResource("StandardMaterial3D_8gbba")
@@ -77,6 +77,11 @@ aperture_info = NodePath("../LoadedLayer/ApertureInfo")
 toggle_elements = NodePath("../LoadedLayer/HBoxContainer/ToggleElements")
 toggle_beam = NodePath("../LoadedLayer/HBoxContainer/ToggleBeam")
 toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/ToggleAperture")
+load_survey_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey")
+load_apertures_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture")
+load_twiss_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
+start_build_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/Import")
+status_label = NodePath("../ImportMenu/MarginContainer/VBoxContainer/ErrorText")
 
 [node name="LoadedLayer" type="CanvasLayer" parent="."]
 visible = false

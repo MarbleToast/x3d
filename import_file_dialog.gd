@@ -12,15 +12,9 @@ var file_contents: String
 
 
 func _ready() -> void:
-	file_selected.connect(func (path): _on_file_selected(path))
-	
 	use_web = OS.has_feature("web")
-	if use_web:
-		file_access_web = FileAccessWeb.new()
-		file_access_web.loaded.connect(
-			func (file_name, _file_type, b64): 
-				_on_file_selected(file_name, b64)
-		)
+	if not use_web:
+		file_selected.connect(func (path): _on_file_selected(path))
 
 
 func _on_browse_aperture_pressed() -> void:
@@ -38,10 +32,8 @@ func _on_browse_twiss_pressed() -> void:
 	do_dialogue("twiss")
 
 
-func do_dialogue(key: String) -> void:
-	if use_web:
-		file_access_web.open("*.csv", key)
-	else:
+func do_dialogue(_key: String) -> void:
+	if not use_web:
 		visible = true
 
 

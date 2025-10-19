@@ -587,3 +587,210 @@ static func build_sweep_mesh(
 	st.generate_normals()
 	st.optimize_indices_for_cache()
 	return st.commit()
+
+
+static func build_sweep_mesh_streaming(
+	web_loader: WebDataLoader,
+	get_line_func: Callable,  # (index: int) -> PackedStringArray
+	line_count: int,
+	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	progress_callback: Callable = Callable()
+) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	
+	var has_prev := false
+	var prev_verts: Array[Vector3] = []
+	var survey_count := web_loader.get_survey_count()
+
+	for i in range(line_count):
+		var data_line: PackedStringArray = get_line_func.call(i)
+		var slice_index := i % survey_count
+		var curr_slice := web_loader.get_survey_line(slice_index, {})
+		
+		if curr_slice.is_empty():
+			continue
+
+		# Get the 2D cross-section points via callback
+		var points_2d: Array[Vector2] = get_points_func.call(data_line)
+		if points_2d.is_empty():
+			continue
+
+		# Use cached basis
+		var curr_center: Vector3 = curr_slice.position
+		var curr_rotation := get_cached_basis(
+			curr_slice.psi, 
+			curr_slice.theta, 
+			curr_slice.phi
+		)
+		
+		# Build vertices in 3D space using the local basis
+		var curr_verts: Array[Vector3] = []
+		for p in points_2d:
+			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
+
+		# Stitching process
+		if has_prev:
+			var num_verts := len(curr_verts)
+			for j in num_verts:
+				var jn := (j + 1) % num_verts
+				st.add_vertex(prev_verts[j])
+				st.add_vertex(prev_verts[jn])
+				st.add_vertex(curr_verts[j])
+
+				st.add_vertex(prev_verts[jn])
+				st.add_vertex(curr_verts[jn])
+				st.add_vertex(curr_verts[j])
+
+		prev_verts = curr_verts
+		has_prev = true
+		
+		if progress_callback.is_valid():
+			progress_callback.call(i)
+
+	st.index()
+	st.generate_normals()
+	st.optimize_indices_for_cache()
+	return st.commit()
+
+
+## Builds box meshes using streamed survey data
+static func build_box_meshes_streaming(
+	web_loader: WebDataLoader,
+	aperture_material: Material,
+	progress_callback: Callable = Callable(),
+	static_body_callback: Callable = Callable(),
+	thickness_modifier: float = 1.0
+) -> void:
+	print("Building box meshes (streaming)...")
+	
+	var survey_count := web_loader.get_survey_count()
+	
+	for i in range(survey_count):
+		var slice := web_loader.get_survey_line(i, {})
+		if slice.is_empty():
+			continue
+		
+		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
+		var end_rotation := start_rotation
+
+		if i + 1 < survey_count:
+			var next_slice := web_loader.get_survey_line(i + 1, {})
+			if not next_slice.is_empty():
+				end_rotation = get_cached_basis(
+					next_slice.psi, 
+					next_slice.theta, 
+					next_slice.phi
+				)
+		
+		var box_position: Vector3
+		var start_tangent := start_rotation.z
+		var end_tangent := end_rotation.z
+		var rotation_axis := start_tangent.cross(end_tangent)
+		var bend_angle := start_tangent.angle_to(end_tangent)
+		var arc_length: float = slice.length * TORUS_SCALE_FACTOR
+	
+		if bend_angle < 1e-6 or rotation_axis.length_squared() < 1e-12:
+			box_position = slice.position + start_tangent * (arc_length * 0.5)
+		else:
+			rotation_axis = rotation_axis.normalized()
+			var radius := arc_length / bend_angle
+			var to_center := start_tangent.cross(rotation_axis).normalized() * radius
+			var mid_angle := bend_angle / 2.0
+			var mid_to_center := to_center.rotated(rotation_axis, mid_angle)
+			var mid_pos := mid_to_center - to_center
+			box_position = slice.position + mid_pos
+	
+		# Create main mesh
+		var box := create_element_mesh(
+			slice.element_type, 
+			slice.length, 
+			start_rotation, 
+			end_rotation, 
+			thickness_modifier
+		)
+
+		var colour := ElementColors.get_element_color(slice.element_type)
+		var base_mat := get_base_material(aperture_material, colour)
+		var mat := base_mat.duplicate()
+		box.surface_set_material(0, mat)
+
+		var mesh_instance := ElementMeshInstance.new()
+		mesh_instance.name = "box"
+		mesh_instance.mesh = box
+		mesh_instance.type = slice.element_type
+		mesh_instance.first_slice_name = slice.name
+		mesh_instance.other_info = slice
+		
+		var static_body := StaticBody3D.new()
+		static_body.name = "Box_%d_%s" % [i, slice.element_type]
+		static_body.transform = Transform3D(Basis.IDENTITY, box_position)
+		
+		var collision_shape := CollisionShape3D.new()
+		collision_shape.shape = get_collision_shape_for_element(
+			slice.element_type, 
+			slice.length, 
+			thickness_modifier
+		)
+		if collision_shape.shape is CylinderShape3D:
+			collision_shape.rotation.x = PI / 2.0
+		
+		if slice.element_type == "Multipole":
+			var kick_mesh := create_element_mesh(
+				"MultipoleKick", 
+				0.0,
+				start_rotation, 
+				end_rotation, 
+				thickness_modifier,
+				true
+			)
+			
+			var kick_color := ElementColors.get_element_color("MultipoleKick")
+			var kick_base_mat := get_base_material(aperture_material, kick_color)
+			var kick_mat := kick_base_mat.duplicate()
+			kick_mesh.surface_set_material(0, kick_mat)
+			
+			var kick_collision := CollisionShape3D.new()
+			kick_collision.shape = get_collision_shape_for_element(
+				"MultipoleKick",
+				0.02,
+				thickness_modifier
+			)
+			kick_collision.position.z = -slice.length / 2
+			kick_collision.rotation.x = PI / 2.0
+			
+			var kick_instance := ElementMeshInstance.new()
+			kick_instance.name = "box"
+			kick_instance.mesh = kick_mesh
+			kick_instance.type = "MultipoleKick"
+			kick_instance.first_slice_name = slice.name + " (Kick)"
+			kick_instance.other_info = slice
+			kick_instance.position.z = -slice.length / 2
+			
+			var kick_body := StaticBody3D.new()
+			kick_body.name = "Box_%d_%s_kick" % [i, slice.element_type]
+			kick_body.transform = Transform3D(Basis.IDENTITY, box_position)
+			
+			kick_body.add_child(kick_instance)
+			kick_body.add_child(kick_collision)
+			
+			if static_body_callback.is_valid():
+				static_body_callback.call(kick_body)
+
+		static_body.add_child(mesh_instance)
+		static_body.add_child(collision_shape)
+		
+		if static_body_callback.is_valid():
+			static_body_callback.call(static_body)
+		
+		if progress_callback.is_valid():
+			progress_callback.call(i)
+		
+		# Yield every 10 elements to prevent blocking
+		if i % 10 == 0:
+			await Engine.get_main_loop().process_frame
+	
+	print("Box mesh generation complete (streaming).")
+	print("Created %s collision polyhedrons, %s materials, and %s transformation bases." % [
+		len(_collision_shape_cache), len(_base_material_cache), len(_basis_cache)
+	])

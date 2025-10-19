@@ -20,6 +20,13 @@ const BEAM_THICKNESS_MODIFIER := 1.0
 @export var toggle_beam: Button
 @export var toggle_apertures: Button
 
+# Web-specific UI
+@export var load_survey_button: Button
+@export var load_apertures_button: Button
+@export var load_twiss_button: Button
+@export var start_build_button: Button
+@export var status_label: RichTextLabel
+
 # Signals for coordinating threads
 signal aperture_mesh_complete(mesh: ArrayMesh)
 signal beam_mesh_complete(arrays: ArrayMesh)
@@ -36,10 +43,13 @@ var beam_mesh_instance: MeshInstance3D
 var aperture_mesh_instance: MeshInstance3D
 var length_mesh_instances: Array[StaticBody3D] = []
 
-# Paths for data files
+# Paths for data files (native)
 var survey_path: String
 var apertures_path: String
 var twiss_path: String
+
+# Web data loader
+var web_loader: WebDataLoader
 
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
@@ -67,6 +77,7 @@ var selected_aperture_mesh: ElementMeshInstance:
 		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
 		selected_aperture_mesh = value
 
+
 func _ready() -> void:
 	toggle_elements.set_pressed_no_signal(true)
 	toggle_elements.toggled.connect(
@@ -92,29 +103,96 @@ func _ready() -> void:
 	
 	_connect_signals()
 	_setup_export_callbacks()
+	
+	if OS.has_feature("web"):
+		_setup_web_loading()
+
+
+func _setup_web_loading() -> void:
+	print("Setting up web loaders...")
+	
+	web_loader = WebDataLoader.new()
+	
+	# Connect signals
+	web_loader.loading_complete.connect(_on_file_loaded)
+	web_loader.loading_error.connect(_on_loading_error)
+	
+	# Setup buttons
+	load_survey_button.pressed.connect(web_loader.load_survey_file)
+	
+	load_apertures_button.pressed.connect(web_loader.load_apertures_file)
+	
+	load_twiss_button.pressed.connect(web_loader.load_twiss_file)
+	
+	start_build_button.pressed.connect(_start_web_build)
+	start_build_button.disabled = true
+	
+	if status_label:
+		status_label.text = "Please load all three CSV files"
+
+
+func _on_file_loaded(data_type: String) -> void:
+	if status_label:
+		status_label.text = "%s loaded successfully" % data_type.capitalize()
+	
+	# Check if all files are loaded
+	if web_loader.has_all_files():
+		if start_build_button:
+			start_build_button.disabled = false
+		if status_label:
+			status_label.text = "All files loaded. Ready to build!"
+
+
+func _on_loading_error(message: String) -> void:
+	if status_label:
+		status_label.text = "Error: " + message
+	push_error(message)
 
 
 func setup() -> void:
-	start_building(DataLoader.load_survey(survey_path))
+	if OS.has_feature("web"):
+		# On web, user must select files manually via buttons
+		return
+	else:
+		start_building(DataLoader.load_survey(survey_path))
+
+
+func _start_web_build() -> void:
+	if not web_loader.has_all_files():
+		if status_label:
+			status_label.text = "Please load all files first"
+		return
+	
+	# Build using web loader (threads work on web too!)
+	start_building_web()
 
 
 func start_building(survey_data: Array[Dictionary]) -> void:
+	"""Native platform building"""
 	if survey_data:
 		for c in get_children():
-			c.queue_free()
+			if c is MeshInstance3D or c is StaticBody3D:
+				c.queue_free()
 		
-		_setup_progress_bars(survey_data)
-		
-		if OS.has_feature("web"):
-			pass
-		else:
-			_start_aperture_thread(survey_data)
-			_start_beam_thread(survey_data)
-		
+		_setup_progress_bars_native(survey_data)
+		_start_aperture_thread(survey_data)
+		_start_beam_thread(survey_data)
 		_start_magnets_thread(survey_data)
 
 
-func _setup_progress_bars(survey_data: Array[Dictionary]) -> void:
+func start_building_web() -> void:
+	"""Web platform building with streamed data"""
+	for c in get_children():
+		if c is MeshInstance3D or c is StaticBody3D:
+			c.queue_free()
+	
+	_setup_progress_bars_web()
+	_start_aperture_thread_web()
+	_start_beam_thread_web()
+	_start_magnets_thread_web()
+
+
+func _setup_progress_bars_native(survey_data: Array[Dictionary]) -> void:
 	aperture_progress_container.visible = true
 	beam_progress_container.visible = true
 	element_progress_container.visible = true
@@ -123,11 +201,22 @@ func _setup_progress_bars(survey_data: Array[Dictionary]) -> void:
 	element_progress.max_value = survey_data.size()
 
 
+func _setup_progress_bars_web() -> void:
+	aperture_progress_container.visible = true
+	beam_progress_container.visible = true
+	element_progress_container.visible = true
+	aperture_progress.max_value = web_loader.get_apertures_count()
+	beam_progress.max_value = web_loader.get_twiss_count()
+	element_progress.max_value = web_loader.get_survey_count()
+
+
 func _connect_signals() -> void:
 	aperture_mesh_complete.connect(_on_aperture_mesh_complete)
 	beam_mesh_complete.connect(_on_beam_mesh_complete)
 	element_meshes_complete.connect(_on_element_meshes_complete)
 
+
+# ==================== Native threading ====================
 
 func _start_aperture_thread(survey_data: Array[Dictionary]) -> void:
 	aperture_thread = Thread.new()
@@ -169,6 +258,53 @@ func _start_magnets_thread(survey_data: Array[Dictionary]) -> void:
 		element_meshes_complete.emit.call_deferred()
 	)
 
+
+# ==================== Web threading (with streaming) ====================
+
+func _start_aperture_thread_web() -> void:
+	aperture_thread = Thread.new()
+	
+	aperture_thread.start(func():
+		var mesh := MeshBuilder.build_sweep_mesh_streaming(
+			web_loader,
+			func(idx: int) -> PackedStringArray: return web_loader.get_apertures_line(idx),
+			web_loader.get_apertures_count(),
+			func(aperture_line): return DataLoader.parse_edge_line(aperture_line, APERTURE_THICKNESS_MODIFIER),
+			func(progress: int): aperture_progress.set_value.call_deferred(progress)
+		)
+		aperture_mesh_complete.emit.call_deferred(mesh)
+	)
+
+
+func _start_beam_thread_web() -> void:
+	beam_thread = Thread.new()
+	beam_thread.start(func():
+		var mesh := MeshBuilder.build_sweep_mesh_streaming(
+			web_loader,
+			func(idx: int) -> PackedStringArray: return web_loader.get_twiss_line(idx),
+			web_loader.get_twiss_count(),
+			func(twiss_line): return MeshBuilder.create_beam_ellipse(twiss_line, BEAM_THICKNESS_MODIFIER),
+			func(progress: int): beam_progress.set_value.call_deferred(progress)
+		)
+		beam_mesh_complete.emit.call_deferred(mesh)
+	)
+
+
+func _start_magnets_thread_web() -> void:
+	magnets_thread = Thread.new()
+	magnets_thread.start(func():
+		MeshBuilder.build_box_meshes_streaming(
+			web_loader,
+			aperture_material,
+			func(progress: int): element_progress.set_value.call_deferred(progress),
+			func(static_body: StaticBody3D): _add_box_static_body.call_deferred(static_body),
+			APERTURE_THICKNESS_MODIFIER
+		)
+		element_meshes_complete.emit.call_deferred()
+	)
+
+
+# ==================== Common functions ====================
 
 func _setup_export_callbacks() -> void:
 	OBJExporter.export_progress_updated.connect(
@@ -245,6 +381,12 @@ func _input(event: InputEvent) -> void:
 
 
 func _export_mesh() -> void:
+	if not mesh_export_thread:
+		mesh_export_thread = Thread.new()
+	
+	if mesh_export_thread.is_started():
+		return
+	
 	mesh_export_thread.start(func():
 		if beam_mesh_instance:
 			OBJExporter.save_mesh_to_files(beam_mesh_instance.mesh, "user://", "mesh_export_beam")
@@ -265,3 +407,6 @@ func _exit_tree() -> void:
 		
 	if magnets_thread and magnets_thread.is_started():
 		magnets_thread.wait_to_finish()
+	
+	if OS.has_feature("web") and web_loader:
+		web_loader.clear_all()
