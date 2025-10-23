@@ -103,50 +103,7 @@ func _ready() -> void:
 	
 	_connect_signals()
 	_setup_export_callbacks()
-	
-	if OS.has_feature("web"):
-		_setup_web_loading()
 
-
-func _setup_web_loading() -> void:
-	print("Setting up web loaders...")
-	
-	web_loader = WebDataLoader.new()
-	
-	# Connect signals
-	web_loader.loading_complete.connect(_on_file_loaded)
-	web_loader.loading_error.connect(_on_loading_error)
-	
-	# Setup buttons
-	load_survey_button.pressed.connect(web_loader.load_survey_file)
-	
-	load_apertures_button.pressed.connect(web_loader.load_apertures_file)
-	
-	load_twiss_button.pressed.connect(web_loader.load_twiss_file)
-	
-	start_build_button.pressed.connect(_start_web_build)
-	start_build_button.disabled = true
-	
-	if status_label:
-		status_label.text = "Please load all three CSV files"
-
-
-func _on_file_loaded(data_type: String) -> void:
-	if status_label:
-		status_label.text = "%s loaded successfully" % data_type.capitalize()
-	
-	# Check if all files are loaded
-	if web_loader.has_all_files():
-		if start_build_button:
-			start_build_button.disabled = false
-		if status_label:
-			status_label.text = "All files loaded. Ready to build!"
-
-
-func _on_loading_error(message: String) -> void:
-	if status_label:
-		status_label.text = "Error: " + message
-	push_error(message)
 
 
 func setup() -> void:
@@ -157,18 +114,7 @@ func setup() -> void:
 		start_building(DataLoader.load_survey(survey_path))
 
 
-func _start_web_build() -> void:
-	if not web_loader.has_all_files():
-		if status_label:
-			status_label.text = "Please load all files first"
-		return
-	
-	# Build using web loader (threads work on web too!)
-	start_building_web()
-
-
 func start_building(survey_data: Array[Dictionary]) -> void:
-	"""Native platform building"""
 	if survey_data:
 		for c in get_children():
 			if c is MeshInstance3D or c is StaticBody3D:
@@ -181,7 +127,6 @@ func start_building(survey_data: Array[Dictionary]) -> void:
 
 
 func start_building_web() -> void:
-	"""Web platform building with streamed data"""
 	for c in get_children():
 		if c is MeshInstance3D or c is StaticBody3D:
 			c.queue_free()

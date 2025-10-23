@@ -4,7 +4,7 @@ extends RefCounted
 ## Handles loading CSV data on both native and web platforms
 ## On web, uses CSVStreamReader to stream data from JavaScript
 
-signal loading_complete(data_type: String)
+signal loading_complete(data_type: String, file_name: String)
 signal loading_progress(current: int, total: int)
 signal loading_error(message: String)
 
@@ -19,6 +19,7 @@ func _init() -> void:
 	_is_web = OS.has_feature("web")
 	
 	if _is_web:
+		print("Web, initialising WebDataLoader.")
 		survey_reader = CSVStreamReader.new()
 		apertures_reader = CSVStreamReader.new()
 		twiss_reader = CSVStreamReader.new()
@@ -33,7 +34,6 @@ func _init() -> void:
 
 
 func load_survey_file() -> void:
-	"""Opens file picker for survey data"""
 	if _is_web:
 		survey_reader.open_file(".csv")
 	else:
@@ -41,7 +41,6 @@ func load_survey_file() -> void:
 
 
 func load_apertures_file() -> void:
-	"""Opens file picker for apertures data"""
 	if _is_web:
 		apertures_reader.open_file(".csv")
 	else:
@@ -49,7 +48,6 @@ func load_apertures_file() -> void:
 
 
 func load_twiss_file() -> void:
-	"""Opens file picker for twiss data"""
 	if _is_web:
 		twiss_reader.open_file(".csv")
 	else:
@@ -57,7 +55,6 @@ func load_twiss_file() -> void:
 
 
 func get_survey_line(index: int, column_map: Dictionary) -> Dictionary:
-	"""Gets a single survey line, parsed into a dictionary"""
 	if not _is_web:
 		return {}
 	
@@ -69,7 +66,6 @@ func get_survey_line(index: int, column_map: Dictionary) -> Dictionary:
 
 
 func get_apertures_line(index: int) -> PackedStringArray:
-	"""Gets a single apertures line"""
 	if not _is_web:
 		return PackedStringArray()
 	
@@ -77,7 +73,6 @@ func get_apertures_line(index: int) -> PackedStringArray:
 
 
 func get_twiss_line(index: int) -> PackedStringArray:
-	"""Gets a single twiss line"""
 	if not _is_web:
 		return PackedStringArray()
 	
@@ -85,32 +80,25 @@ func get_twiss_line(index: int) -> PackedStringArray:
 
 
 func get_survey_count() -> int:
-	"""Returns number of survey lines"""
 	return survey_reader.get_line_count() if _is_web else 0
 
 
 func get_apertures_count() -> int:
-	"""Returns number of aperture lines"""
 	return apertures_reader.get_line_count() if _is_web else 0
 
 
 func get_twiss_count() -> int:
-	"""Returns number of twiss lines"""
 	return twiss_reader.get_line_count() if _is_web else 0
 
 
-func has_all_files() -> bool:
-	"""Check if all required files are loaded"""
+func can_build() -> bool:
 	if not _is_web:
 		return false
 	
-	return (survey_reader.get_line_count() > 0 and 
-			apertures_reader.get_line_count() > 0 and 
-			twiss_reader.get_line_count() > 0)
+	return survey_reader.get_line_count() > 0
 
 
 func load_all_survey_data() -> Array[Dictionary]:
-	"""Loads entire survey dataset into memory (use with caution on web)"""
 	var result: Array[Dictionary] = []
 	var count := get_survey_count()
 	var column_map := {}
@@ -127,7 +115,6 @@ func load_all_survey_data() -> Array[Dictionary]:
 
 
 func clear_all() -> void:
-	"""Clears all loaded files from memory"""
 	if _is_web:
 		survey_reader.close_file()
 		apertures_reader.close_file()
@@ -136,14 +123,14 @@ func clear_all() -> void:
 
 func _on_survey_opened(file_name: String, total_lines: int) -> void:
 	print("Survey file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("survey")
+	loading_complete.emit("survey", file_name)
 
 
 func _on_apertures_opened(file_name: String, total_lines: int) -> void:
 	print("Apertures file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("apertures")
+	loading_complete.emit("apertures", file_name)
 
 
 func _on_twiss_opened(file_name: String, total_lines: int) -> void:
 	print("Twiss file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("twiss")
+	loading_complete.emit("twiss", file_name)

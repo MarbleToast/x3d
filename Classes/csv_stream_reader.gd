@@ -5,6 +5,9 @@ signal file_opened(file_name: String, total_lines: int)
 signal error(message: String)
 
 var _js_interface: JavaScriptObject
+var success_callback: JavaScriptObject
+var error_callback: JavaScriptObject
+
 var _current_file: String = ""
 var _total_lines: int = 0
 
@@ -18,19 +21,17 @@ func _init() -> void:
 
 
 func open_file(accept_files: String = ".csv") -> void:
-	"""Opens a file picker dialog for CSV files"""
 	if not _js_interface:
 		error.emit("JavaScript interface not initialized")
 		return
 	
-	var on_file_selected = JavaScriptBridge.create_callback(_on_file_selected)
-	var on_error = JavaScriptBridge.create_callback(_on_error)
+	success_callback = JavaScriptBridge.create_callback(_on_file_selected)
+	error_callback = JavaScriptBridge.create_callback(_on_error)
 	
-	_js_interface.openFile(accept_files, on_file_selected, on_error)
+	_js_interface.openFile(accept_files, success_callback, error_callback)
 
 
 func get_line(line_index: int) -> PackedStringArray:
-	"""Gets a specific line from the currently open CSV file"""
 	if not _js_interface or _current_file.is_empty():
 		return PackedStringArray()
 	
@@ -48,17 +49,14 @@ func get_line(line_index: int) -> PackedStringArray:
 
 
 func get_line_count() -> int:
-	"""Returns total number of lines in the current file"""
 	return _total_lines
 
 
 func get_current_file_name() -> String:
-	"""Returns the name of the currently loaded file"""
 	return _current_file
 
 
 func close_file() -> void:
-	"""Closes the current file and frees memory"""
 	if _js_interface and not _current_file.is_empty():
 		_js_interface.closeFile(_current_file)
 		_current_file = ""
@@ -66,6 +64,7 @@ func close_file() -> void:
 
 
 func _on_file_selected(args: Array) -> void:
+	print("File %s loaded with %d lines." % [args[0], args[1]])
 	_current_file = str(args[0])
 	_total_lines = int(args[1])
 	file_opened.emit(_current_file, _total_lines)
@@ -76,60 +75,12 @@ func _on_error(args: Array) -> void:
 	error.emit(err_msg)
 
 
-const js_source_code = """
+const js_source_code = """	
 function godotCSVStreamReaderInit() {
-	// Storage for parsed CSV files
-	const csvFiles = {};
-	
-	function parseCSVFile(text) {
-		const lines = [];
-		let currentLine = [];
-		let currentField = '';
-		let inQuotes = false;
-		
-		for (let i = 0; i < text.length; i++) {
-			const char = text[i];
-			const nextChar = text[i + 1];
-			
-			if (inQuotes) {
-				if (char === '"') {
-					if (nextChar === '"') {
-						currentField += '"';
-						i++;
-					} else {
-						inQuotes = false;
-					}
-				} else {
-					currentField += char;
-				}
-			} else {
-				if (char === '"') {
-					inQuotes = true;
-				} else if (char === ',' || char === ';') {
-					currentLine.push(currentField.trim());
-					currentField = '';
-				} else if (char === '\\n') {
-					if (currentField || currentLine.length > 0) {
-						currentLine.push(currentField.trim());
-						lines.push(currentLine);
-						currentLine = [];
-						currentField = '';
-					}
-				} else if (char === '\\r') {
-					// Skip carriage returns
-				} else {
-					currentField += char;
-				}
-			}
-		}
-		
-		// Handle last field/line
-		if (currentField || currentLine.length > 0) {
-			currentLine.push(currentField.trim());
-			lines.push(currentLine);
-		}
-		
-		return lines;
+	// Check if Papa Parse is loaded
+	if (typeof Papa === 'undefined') {
+		console.error('PapaParse library not found! Make sure to include it in your HTML head:');
+		console.error('<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>');
 	}
 	
 	const interface = {
@@ -137,37 +88,47 @@ function godotCSVStreamReaderInit() {
 			const input = document.createElement('input');
 			input.type = 'file';
 			input.accept = acceptFiles;
-			console.log("Opening file...");
+			console.log("Opening file picker...");
 			
 			input.onchange = (event) => {
 				const file = event.target.files[0];
 				if (!file) {
+					console.error("No file selected");
 					errorCallback('No file selected');
 					return;
 				}
 				
-				const reader = new FileReader();
+				console.log("Reading file:", file.name);
 				
-				reader.onload = (e) => {
-					try {
-						const text = e.target.result;
-						const parsedLines = parseCSVFile(text);
+				// Use PapaParse to parse the CSV
+				Papa.parse(file, {
+					complete: function(results) {
+						console.log("Parse complete. Rows:", results.data.length);
+
+						csvFiles[file.name] = results.data;
 						
-						// Store parsed data
-						csvFiles[file.name] = parsedLines;
-						
-						// Notify Godot
-						successCallback(file.name, parsedLines.length);
-					} catch (err) {
-						errorCallback('Failed to parse CSV: ' + err.message);
-					}
-				};
-				
-				reader.onerror = () => {
-					errorCallback('Failed to read file');
-				};
-				
-				reader.readAsText(file);
+						console.log("Calling Godot to inform it of success!")
+						successCallback(file.name, results.data.length);
+					},
+					error: function(error) {
+						console.error("Parse error:", error);
+						errorCallback('Failed to parse CSV: ' + error.message);
+					},
+					skipEmptyLines: true,
+					// Additional PapaParse options for robustness
+					delimiter: "",  // Auto-detect
+					newline: "",    // Auto-detect
+					quoteChar: '"',
+					escapeChar: '"',
+					dynamicTyping: false,  // Keep everything as strings for consistency
+					preview: 0,     // Parse entire file
+					encoding: "",   // Auto-detect
+					worker: false,  // Don't use worker thread (keep it simple)
+					comments: false,
+					step: undefined,
+					fastMode: undefined,
+					withCredentials: undefined
+				});
 			};
 			
 			input.click();
@@ -190,6 +151,7 @@ function godotCSVStreamReaderInit() {
 		},
 		
 		closeFile: (fileName) => {
+			console.log("Closing file:", fileName);
 			delete csvFiles[fileName];
 		}
 	};
