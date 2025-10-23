@@ -107,9 +107,9 @@ func _ready() -> void:
 
 
 func setup() -> void:
+	print("Mesh Manager setting up for building...")
 	if OS.has_feature("web"):
-		# On web, user must select files manually via buttons
-		return
+		start_building_web()
 	else:
 		start_building(DataLoader.load_survey(survey_path))
 
@@ -127,6 +127,9 @@ func start_building(survey_data: Array[Dictionary]) -> void:
 
 
 func start_building_web() -> void:
+	if not web_loader:
+		web_loader = %FileDialog.web_loader
+
 	for c in get_children():
 		if c is MeshInstance3D or c is StaticBody3D:
 			c.queue_free()

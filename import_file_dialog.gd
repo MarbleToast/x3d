@@ -40,21 +40,29 @@ func _ready() -> void:
 
 func _on_browse_aperture_pressed() -> void:
 	target = line_edit_aperture
-	do_dialogue(web_loader.load_apertures_file)
+	do_dialogue("apertures")
 
 
 func _on_browse_survey_pressed() -> void:
 	target = line_edit_survey
-	do_dialogue(web_loader.load_survey_file if web_loader else null)
+	do_dialogue("survey")
 
 
 func _on_browse_twiss_pressed() -> void:
 	target = line_edit_twiss
-	do_dialogue(web_loader.load_twiss_file)
+	do_dialogue("twiss")
 
 
-func do_dialogue(fn: Callable = Callable()) -> void:
+func do_dialogue(key: String) -> void:
 	if use_web:
+		var fn: Callable
+		match key:
+			"survey":
+				fn = web_loader.load_survey_file
+			"apertures":
+				fn = web_loader.load_apertures_file
+			"twiss":
+				fn = web_loader.load_twiss_file
 		fn.call()
 	else:
 		visible = true

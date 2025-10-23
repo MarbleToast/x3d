@@ -165,4 +165,5 @@ static func load_csv(path: String) -> Array[PackedStringArray]:
 
 
 static func has_loaded_file_on_web(file_key: String) -> bool:
-	return JavaScriptBridge.get_interface("fileContents")[file_key] != null
+	print("Accessing CSV file object for '%s'..." % file_key)
+	return JavaScriptBridge.get_interface("csvFiles")[file_key] != null

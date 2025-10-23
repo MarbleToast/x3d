@@ -1,112 +1,88 @@
 extends Camera3D
 
-# Modifier keys' speed multiplier
-const SHIFT_MULTIPLIER = 5
-const ALT_MULTIPLIER = 1.0 / SHIFT_MULTIPLIER
+@export var rotation_speed: float = 0.003
+@export var movement_smoothing: float = 0.15
+@export var rotation_smoothing: float = 0.15
 
-@export_range(0.0, 1.0) var sensitivity = 0.25
+var _direction: Vector3 = Vector3.ZERO
+var _velocity: Vector3 = Vector3.ZERO
+var _acceleration: float = 30.0
+var _deceleration: float = -10.0
+var _vel_multiplier: float = 4.0
 
-# Mouse state
-var _mouse_position = Vector2(0.0, 0.0)
-var _total_pitch = 0.0
+var _key_state: Dictionary = {
+	"move_forward": false,
+	"move_backward": false,
+	"move_left": false,
+	"move_right": false,
+	"move_up": false,
+	"move_down": false,
+}
 
-# Movement state
-var _direction = Vector3(0.0, 0.0, 0.0)
-var _velocity = Vector3(0.0, 0.0, 0.0)
-var _acceleration = 30
-var _deceleration = -10
-var _vel_multiplier = 4
+var _freelook_enabled: bool = false
 
-# Keyboard state
-var _w = false
-var _s = false
-var _a = false
-var _d = false
-var _q = false
-var _e = false
-var _shift = false
-var _alt = false
+var euler_rotation: Vector3 = Vector3.ZERO
+var target_euler: Vector3 = Vector3.ZERO
 
+func _unhandled_input(event: InputEvent) -> void:
+	if _freelook_enabled and event is InputEventMouseMotion:
+		var mouse_delta: Vector2 = event.relative
+		target_euler.x -= mouse_delta.y * rotation_speed
+		target_euler.y -= mouse_delta.x * rotation_speed
+		target_euler.x = clamp(target_euler.x, -PI/2, PI/2)
 
-func _input(event):
-	# Receives mouse motion
-	if event is InputEventMouseMotion:
-		_mouse_position = event.relative
-	
-	# Receives mouse button input
-	if event is InputEventMouseButton:
+	elif event is InputEventMouseButton:
 		match event.button_index:
-			MOUSE_BUTTON_RIGHT: # Only allows rotation if right click down
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE)
-			MOUSE_BUTTON_WHEEL_UP: # Increases max velocity
-				_vel_multiplier = clamp(_vel_multiplier * 1.1, 0.2, 50)
-			MOUSE_BUTTON_WHEEL_DOWN: # Decereases max velocity
-				_vel_multiplier = clamp(_vel_multiplier / 1.1, 0.2, 50)
-
-	# Receives key input
-	if event is InputEventKey:
-		match event.keycode:
-			KEY_W:
-				_w = event.pressed
-			KEY_S:
-				_s = event.pressed
-			KEY_A:
-				_a = event.pressed
-			KEY_D:
-				_d = event.pressed
-			KEY_Q:
-				_q = event.pressed
-			KEY_E:
-				_e = event.pressed
-
-
-# Updates mouselook and movement every frame
-func _process(delta):
-	_update_mouselook()
-	_update_movement(delta)
-
-
-# Updates camera movement
-func _update_movement(delta):
-	# Computes desired direction from key states
-	_direction = Vector3((_d as float) - (_a as float), 
-						(_e as float) - (_q as float), 
-						(_s as float) - (_w as float))
+			MOUSE_BUTTON_RIGHT:
+				if event.pressed:
+					_freelook_enabled = !_freelook_enabled
+					Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if _freelook_enabled else Input.MOUSE_MODE_VISIBLE)
+			MOUSE_BUTTON_WHEEL_UP:
+				_vel_multiplier *= 1.1
+			MOUSE_BUTTON_WHEEL_DOWN:
+				_vel_multiplier = max(_vel_multiplier / 1.1, 0.2)
 	
-	# Computes the change in velocity due to desired direction and "drag"
-	# The "drag" is a constant acceleration on the camera to bring it's velocity to 0
-	var offset = _direction.normalized() * _acceleration * _vel_multiplier * delta \
+	elif event is InputEventKey and not event.is_echo():
+		if event.keycode in _key_state:
+			_key_state[event.keycode] = event.pressed
+
+
+func _process(delta: float) -> void:
+	update_key_state()
+	update_movement(delta)
+	update_rotation(delta)
+
+
+func update_key_state() -> void:
+	for action in _key_state.keys():
+		_key_state[action] = Input.is_action_pressed(action)
+
+
+func update_movement(delta: float) -> void:
+	_direction = Vector3(
+		float(_key_state["move_right"]) - float(_key_state["move_left"]),
+		float(_key_state["move_up"]) - float(_key_state["move_down"]),
+		float(_key_state["move_backward"]) - float(_key_state["move_forward"])
+	)
+	
+	var offset: Vector3 = _direction.normalized() * _acceleration * _vel_multiplier * delta \
 		+ _velocity.normalized() * _deceleration * _vel_multiplier * delta
 	
-	# Compute modifiers' speed multiplier
-	var speed_multi = 1
-	if _shift: speed_multi *= SHIFT_MULTIPLIER
-	if _alt: speed_multi *= ALT_MULTIPLIER
-	
-	# Checks if we should bother translating the camera
 	if _direction == Vector3.ZERO and offset.length_squared() > _velocity.length_squared():
-		# Sets the velocity to 0 to prevent jittering due to imperfect deceleration
 		_velocity = Vector3.ZERO
 	else:
-		# Clamps speed to stay within maximum value (_vel_multiplier)
-		_velocity.x = clamp(_velocity.x + offset.x, -_vel_multiplier, _vel_multiplier)
-		_velocity.y = clamp(_velocity.y + offset.y, -_vel_multiplier, _vel_multiplier)
-		_velocity.z = clamp(_velocity.z + offset.z, -_vel_multiplier, _vel_multiplier)
-	
-		translate(_velocity * delta * speed_multi)
-
-# Updates mouse look 
-func _update_mouselook():
-	# Only rotates mouse if the mouse is captured
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		_mouse_position *= sensitivity
-		var yaw = _mouse_position.x
-		var pitch = _mouse_position.y
-		_mouse_position = Vector2(0, 0)
+		var target_velocity: Vector3
+		target_velocity.x = clamp(_velocity.x + offset.x, -_vel_multiplier, _vel_multiplier)
+		target_velocity.y = clamp(_velocity.y + offset.y, -_vel_multiplier, _vel_multiplier)
+		target_velocity.z = clamp(_velocity.z + offset.z, -_vel_multiplier, _vel_multiplier)
 		
-		# Prevents looking up/down too far
-		pitch = clamp(pitch, -90 - _total_pitch, 90 - _total_pitch)
-		_total_pitch += pitch
-	
-		rotate_y(deg_to_rad(-yaw))
-		rotate_object_local(Vector3(1,0,0), deg_to_rad(-pitch))
+		_velocity = _velocity.lerp(target_velocity, 1.0 - pow(1.0 - movement_smoothing, delta * 60.0))
+		
+		translate(_velocity * delta)
+
+
+func update_rotation(delta: float) -> void:
+	euler_rotation = euler_rotation.lerp(target_euler, 1.0 - pow(1.0 - rotation_smoothing, delta * 60.0))
+	rotation.x = euler_rotation.x
+	rotation.y = euler_rotation.y
+	rotation.z = euler_rotation.z

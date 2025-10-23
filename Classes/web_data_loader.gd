@@ -54,6 +54,13 @@ func load_twiss_file() -> void:
 		push_error("Use native file loading for non-web platforms")
 
 
+func get_survey_line_raw(index: int) -> PackedStringArray:
+	if not _is_web:
+		return PackedStringArray()
+	
+	return survey_reader.get_line(index)
+
+
 func get_survey_line(index: int, column_map: Dictionary) -> Dictionary:
 	if not _is_web:
 		return {}
@@ -89,29 +96,6 @@ func get_apertures_count() -> int:
 
 func get_twiss_count() -> int:
 	return twiss_reader.get_line_count() if _is_web else 0
-
-
-func can_build() -> bool:
-	if not _is_web:
-		return false
-	
-	return survey_reader.get_line_count() > 0
-
-
-func load_all_survey_data() -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	var count := get_survey_count()
-	var column_map := {}
-	
-	for i in range(count):
-		var line_dict := get_survey_line(i, column_map)
-		if not line_dict.is_empty():
-			result.append(line_dict)
-		
-		if i % 100 == 0:
-			loading_progress.emit(i, count)
-	
-	return result
 
 
 func clear_all() -> void:

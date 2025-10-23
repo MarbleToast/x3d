@@ -472,6 +472,7 @@ static func build_box_meshes(
 			slice.length, 
 			thickness_modifier
 		)
+		collision_shape.transform = Transform3D(start_rotation)
 		if collision_shape.shape is CylinderShape3D:
 			collision_shape.rotation.x = PI / 2.0
 		
@@ -496,7 +497,7 @@ static func build_box_meshes(
 				0.02,
 				thickness_modifier
 			)
-			kick_collision.position.z = -slice.length / 2
+			kick_collision.transform = Transform3D(start_rotation)
 			kick_collision.rotation.x = PI / 2.0
 			
 			var kick_instance := ElementMeshInstance.new()
@@ -505,11 +506,10 @@ static func build_box_meshes(
 			kick_instance.type = "MultipoleKick"
 			kick_instance.first_slice_name = slice.name + " (Kick)"
 			kick_instance.other_info = slice
-			kick_instance.position.z = -slice.length / 2
 			
 			var kick_body := StaticBody3D.new()
 			kick_body.name = "Box_%d_%s" % [i, slice.element_type]
-			kick_body.transform = Transform3D(Basis.IDENTITY, box_position)
+			kick_body.transform = Transform3D(Basis.IDENTITY, box_position + start_rotation * Vector3(0, 0, -slice.length/2))
 			
 			kick_body.add_child(kick_instance)
 			kick_body.add_child(kick_collision)
@@ -602,11 +602,13 @@ static func build_sweep_mesh_streaming(
 	var has_prev := false
 	var prev_verts: Array[Vector3] = []
 	var survey_count := web_loader.get_survey_count()
+	var header := web_loader.get_survey_line_raw(0)
+	var column_map := DataLoader.parse_survey_header(header)
 
 	for i in range(line_count):
 		var data_line: PackedStringArray = get_line_func.call(i)
 		var slice_index := i % survey_count
-		var curr_slice := web_loader.get_survey_line(slice_index, {})
+		var curr_slice := web_loader.get_survey_line(slice_index, column_map)
 		
 		if curr_slice.is_empty():
 			continue
@@ -666,8 +668,11 @@ static func build_box_meshes_streaming(
 	
 	var survey_count := web_loader.get_survey_count()
 	
+	var header := web_loader.get_survey_line_raw(0)
+	var column_map := DataLoader.parse_survey_header(header)
+	
 	for i in range(survey_count):
-		var slice := web_loader.get_survey_line(i, {})
+		var slice := web_loader.get_survey_line(i,column_map)
 		if slice.is_empty():
 			continue
 		
@@ -675,7 +680,7 @@ static func build_box_meshes_streaming(
 		var end_rotation := start_rotation
 
 		if i + 1 < survey_count:
-			var next_slice := web_loader.get_survey_line(i + 1, {})
+			var next_slice := web_loader.get_survey_line(i + 1, column_map)
 			if not next_slice.is_empty():
 				end_rotation = get_cached_basis(
 					next_slice.psi, 

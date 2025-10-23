@@ -105,7 +105,7 @@ function godotCSVStreamReaderInit() {
 					complete: function(results) {
 						console.log("Parse complete. Rows:", results.data.length);
 
-						csvFiles[file.name] = results.data;
+						window.csvFiles[file.name] = results.data;
 						
 						console.log("Calling Godot to inform it of success!")
 						successCallback(file.name, results.data.length);

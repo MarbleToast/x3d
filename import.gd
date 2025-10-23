@@ -12,6 +12,7 @@ extends Button
 @export var error_text: RichTextLabel
 
 func _on_pressed() -> void:
+	print("Import button pressed.")
 	if not OS.has_feature("web"):
 		if FileAccess.file_exists(line_edit_survey.text):
 			mesh_manager.survey_path = line_edit_survey.text
@@ -30,7 +31,7 @@ func _on_pressed() -> void:
 		else:
 			mesh_manager.twiss_path = ""
 
-	if mesh_manager.survey_path or DataLoader.has_loaded_file_on_web("survey"):
+	if mesh_manager.survey_path or DataLoader.has_loaded_file_on_web(line_edit_survey.text):
 		error_text.visible = false
 		visualiser_canvas_layer.visible = true
 		menu_container.visible = false

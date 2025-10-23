@@ -62,6 +62,7 @@ transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 1, 0, 
 environment = SubResource("Environment_8gbba")
 current = true
 script = ExtResource("2_bo1nx")
+movement_smoothing = 0.999
 
 [node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
 script = ExtResource("1_jjgbg")
@@ -194,6 +195,22 @@ layout_mode = 2
 toggle_mode = true
 text = "Show Import Menu"
 
+[node name="Info" type="RichTextLabel" parent="LoadedLayer"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -416.0
+offset_top = -128.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "XSuite 3D visualiser by James Bradford
+WSAD to move
+SPACE to ascend, SHIFT to descend
+LMB to view element data, RMB to toggle freelook
+Scroll wheel to increase/decrease speed"
+
 [node name="ImportMenu" type="PanelContainer" parent="."]
 layout_mode = 1
 anchors_preset = 8
@@ -294,6 +311,7 @@ fit_content = true
 scroll_active = false
 
 [node name="FileDialog" type="FileDialog" parent="ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss")]
+unique_name_in_owner = true
 oversampling_override = 1.0
 title = "Open a File"
 initial_position = 1
