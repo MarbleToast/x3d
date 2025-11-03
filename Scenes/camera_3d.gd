@@ -4,6 +4,8 @@ extends Camera3D
 @export var movement_smoothing: float = 0.15
 @export var rotation_smoothing: float = 0.15
 
+var _initial_position: Vector3 = position
+var _initial_rotation: Vector3 = rotation
 var _direction: Vector3 = Vector3.ZERO
 var _velocity: Vector3 = Vector3.ZERO
 var _acceleration: float = 30.0
@@ -86,3 +88,11 @@ func update_rotation(delta: float) -> void:
 	rotation.x = euler_rotation.x
 	rotation.y = euler_rotation.y
 	rotation.z = euler_rotation.z
+
+
+func reset_position() -> void:
+	position = _initial_position
+	rotation = _initial_rotation
+	euler_rotation = _initial_rotation
+	target_euler = _initial_rotation
+	_vel_multiplier = 4.0

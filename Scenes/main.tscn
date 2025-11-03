@@ -64,8 +64,9 @@ current = true
 script = ExtResource("2_bo1nx")
 movement_smoothing = 0.999
 
-[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
+[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("main_camera", "aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
 script = ExtResource("1_jjgbg")
+main_camera = NodePath("../Camera3D")
 aperture_material = SubResource("StandardMaterial3D_kry3j")
 beam_material = SubResource("StandardMaterial3D_8gbba")
 aperture_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer")
@@ -272,6 +273,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="RemoveAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+visible = false
 layout_mode = 2
 text = "Clear"
 
@@ -292,6 +294,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="RemoveTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+visible = false
 layout_mode = 2
 text = "Clear"
 

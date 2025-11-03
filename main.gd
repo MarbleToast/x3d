@@ -3,18 +3,23 @@ extends Node3D
 const APERTURE_THICKNESS_MODIFIER := 1.0
 const BEAM_THICKNESS_MODIFIER := 1.0
 
+@export var main_camera: Camera3D
+
 @export var aperture_material: Material
 @export var beam_material: Material
 
+# Progress bars
 @export var aperture_progress_container: Container
 @export var beam_progress_container: Container
 @export var element_progress_container: Container
-
 @export var aperture_progress: TextureProgressBar
 @export var beam_progress: TextureProgressBar
 @export var element_progress: TextureProgressBar
+
+# Aperture info panel, right side
 @export var aperture_info: RichTextLabel
 
+# UI buttons
 @export var toggle_elements: Button
 @export var toggle_beam: Button
 @export var toggle_apertures: Button
@@ -82,6 +87,8 @@ func _ready() -> void:
 
 func setup() -> void:
 	print("Mesh Manager setting up for building...")
+	
+	main_camera.reset_position()
 	
 	length_mesh_instances = []
 
