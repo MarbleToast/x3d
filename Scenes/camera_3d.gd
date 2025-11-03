@@ -21,8 +21,8 @@ var _key_state: Dictionary = {
 
 var _freelook_enabled: bool = false
 
-var euler_rotation: Vector3 = Vector3.ZERO
-var target_euler: Vector3 = Vector3.ZERO
+var euler_rotation: Vector3 = rotation
+var target_euler: Vector3 = rotation
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _freelook_enabled and event is InputEventMouseMotion:

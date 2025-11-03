@@ -1,8 +1,14 @@
 class_name DataLoader
 extends RefCounted
 
-# Aperture constants
+# Aperture and beam constants
 const APERTURE_TORUS_SCALE_FACTOR := 1.0
+const RELATIVISTIC_GAMMA := 7247.364757558866
+const BEAM_EMITTANCE_X := 2.5e-6 / RELATIVISTIC_GAMMA
+const BEAM_EMITTANCE_Y := 2.5e-6 / RELATIVISTIC_GAMMA
+const BEAM_NUM_SIGMAS := 3
+const BEAM_SIGMA_DELTA := 8e-4
+
 
 ## Parses the survey CSV header and returns a dictionary mapping column names to indices
 static func parse_survey_header(header: PackedStringArray) -> Dictionary:
@@ -76,13 +82,6 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 	var dx := float(line[23])
 	var dy := float(line[25])
 	
-	# Beam constants
-	const RELATIVISTIC_GAMMA := 7247.364757558866
-	const BEAM_EMITTANCE_X := 2.5e-6 / RELATIVISTIC_GAMMA
-	const BEAM_EMITTANCE_Y := 2.5e-6 / RELATIVISTIC_GAMMA
-	const BEAM_NUM_SIGMAS := 3
-	const BEAM_SIGMA_DELTA := 8e-4
-	
 	return {
 		position = Vector2(x, y),
 		sigma = BEAM_SIGMA_DELTA * BEAM_NUM_SIGMAS * Vector2(
@@ -90,6 +89,7 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 			sqrt(BEAM_EMITTANCE_Y * beta_y) + absf(dy)
 		)
 	}
+
 
 ## Parses a line of aperture vertex data from an Xsuite apertures CSV
 static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float = 1.0) -> Array[Vector2]:

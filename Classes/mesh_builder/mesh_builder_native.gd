@@ -1,0 +1,127 @@
+class_name MeshBuilderNative
+extends MeshBuilderBase
+
+var survey_data: Array[Dictionary]
+var aperture_path: String
+var twiss_path: String
+
+func build_box_meshes(
+	aperture_material: Material,
+	progress_callback: Callable = Callable(),
+	static_body_callback: Callable = Callable(),
+	thickness_modifier: float = 1.0
+) -> void:
+	print("Building box meshes...")
+
+	for i in range(survey_data.size()):
+		var slice := survey_data[i]
+		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
+		var end_rotation := start_rotation
+		
+		if i + 1 < len(survey_data):
+			var next_slice := survey_data[i + 1]
+			end_rotation = get_cached_basis(next_slice.psi, next_slice.theta, next_slice.phi)
+		
+		var box_position := _calculate_element_position(slice, start_rotation, end_rotation)
+		var box := create_element_mesh(slice.element_type, slice.length, start_rotation, end_rotation, thickness_modifier)
+		
+		var colour := ElementColors.get_element_color(slice.element_type)
+		var mat := get_base_material(aperture_material, colour).duplicate()
+		box.surface_set_material(0, mat)
+		
+		var mesh_instance := ElementMeshInstance.new()
+		mesh_instance.mesh = box
+		mesh_instance.name = "box"
+		mesh_instance.type = slice.element_type
+		mesh_instance.first_slice_name = slice.name
+		mesh_instance.other_info = slice
+		
+		var static_body := StaticBody3D.new()
+		static_body.name = "Box_%d_%s" % [i, slice.element_type]
+		static_body.transform = Transform3D(Basis.IDENTITY, box_position)
+		
+		var collision_shape := CollisionShape3D.new()
+		collision_shape.shape = get_collision_shape_for_element(slice.element_type, slice.length, thickness_modifier, start_rotation, end_rotation, box)
+		collision_shape.transform = Transform3D(start_rotation)
+		if collision_shape.shape is CylinderShape3D:
+			collision_shape.rotation.x = PI / 2.0
+		
+		static_body.add_child(mesh_instance)
+		static_body.add_child(collision_shape)
+		
+		if slice.element_type == "Multipole":
+			_add_multipole_kick(box_position, slice, start_rotation, end_rotation, aperture_material, thickness_modifier, static_body_callback)
+		
+		if static_body_callback.is_valid():
+			static_body_callback.call(static_body)
+		
+		if progress_callback.is_valid():
+			progress_callback.call(i)
+	
+	print("Box mesh generation complete.")
+	print("Created %s shapes, %s materials, %s bases." % [len(_collision_shape_cache), len(_base_material_cache), len(_basis_cache)])
+
+
+func build_sweep_mesh(
+	path: String,
+	get_points_func: Callable,
+	progress_callback: Callable = Callable()
+) -> ArrayMesh:
+	var line_data := DataLoader.load_csv(path)
+	
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	
+	var has_prev := false
+	var prev_verts: Array[Vector3] = []
+	
+	for aperture_index in range(len(line_data)):
+		var data_line := line_data[aperture_index]
+		var curr_slice := survey_data[aperture_index % len(survey_data)]
+		
+		var points_2d: Array[Vector2] = get_points_func.call(data_line)
+		if points_2d.is_empty():
+			continue
+		
+		var curr_center: Vector3 = curr_slice.position
+		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
+		
+		var curr_verts: Array[Vector3] = []
+		for p in points_2d:
+			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
+		
+		if has_prev:
+			st.add_triangle_fan(_stitch_rings(prev_verts, curr_verts))
+		
+		prev_verts = curr_verts
+		has_prev = true
+		
+		if progress_callback.is_valid():
+			progress_callback.call(aperture_index)
+	
+	st.index()
+	st.generate_normals()
+	st.optimize_indices_for_cache()
+	return st.commit()
+
+
+func build_beam_mesh(
+	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	progress_callback: Callable = Callable()
+) -> ArrayMesh:
+	return build_sweep_mesh(
+		twiss_path,
+		get_points_func,
+		progress_callback
+	)
+
+
+func build_aperture_mesh(
+	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	progress_callback: Callable = Callable()
+) -> ArrayMesh:
+	return build_sweep_mesh(
+		aperture_path,
+		get_points_func,
+		progress_callback
+	)

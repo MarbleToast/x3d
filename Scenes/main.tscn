@@ -58,7 +58,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 1, 0, 0)
+transform = Transform3D(-2.1855695e-07, 0, 1, 0, 1, 0, -1, 0, -2.1855695e-07, 4, 2, 0)
 environment = SubResource("Environment_8gbba")
 current = true
 script = ExtResource("2_bo1nx")
@@ -271,6 +271,10 @@ text = "Aperture File"
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="RemoveAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Clear"
+
 [node name="BrowseAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Browse..."
@@ -286,6 +290,10 @@ text = "Twiss File"
 [node name="LineEditTwiss" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="RemoveTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+text = "Clear"
 
 [node name="BrowseTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
@@ -310,22 +318,28 @@ bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="FileDialog" type="FileDialog" parent="ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss")]
+[node name="FileDialog" type="FileDialog" parent="ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss", "remove_aperture", "remove_twiss", "status_label")]
 unique_name_in_owner = true
 oversampling_override = 1.0
 title = "Open a File"
 initial_position = 1
 file_mode = 0
+access = 2
 filters = PackedStringArray("*.csv,*.tfs")
 use_native_dialog = true
 script = ExtResource("4_jjvhh")
 line_edit_aperture = NodePath("../MarginContainer/VBoxContainer/HBoxContainer/LineEditAperture")
 line_edit_survey = NodePath("../MarginContainer/VBoxContainer/HBoxContainer2/LineEditSurvey")
 line_edit_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/LineEditTwiss")
+remove_aperture = NodePath("../MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture")
+remove_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss")
+status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
 [connection signal="pressed" from="LoadedLayer/HBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture" to="ImportMenu/FileDialog" method="_on_remove_aperture_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]
+[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss" to="ImportMenu/FileDialog" method="_on_remove_twiss_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss" to="ImportMenu/FileDialog" method="_on_browse_twiss_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/Import" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_pressed"]
 [connection signal="file_selected" from="ImportMenu/FileDialog" to="ImportMenu/FileDialog" method="_on_file_selected"]

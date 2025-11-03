@@ -4,19 +4,21 @@ extends FileDialog
 @export var line_edit_survey: LineEdit
 @export var line_edit_twiss: LineEdit
 
+@export var remove_aperture: Button
+@export var remove_twiss: Button
+
 @export var status_label: RichTextLabel
 
 var target: LineEdit
 
-var web_loader: WebDataLoader
+var web_loader: DataLoaderWeb
 var use_web: bool
-var file_contents: String
 
 
 func setup_web_loading() -> void:
 	print("Setting up web loaders...")
 	
-	web_loader = WebDataLoader.new()
+	web_loader = DataLoaderWeb.new()
 	
 	# Connect signals
 	web_loader.loading_complete.connect(_on_file_selected)
@@ -33,9 +35,6 @@ func _ready() -> void:
 	use_web = OS.has_feature("web")
 	if use_web:
 		setup_web_loading()
-	else:
-		print("Desktop, initialising standard FileDialog node.")
-		file_selected.connect(func (path): _on_file_selected("", path))
 
 
 func _on_browse_aperture_pressed() -> void:
@@ -68,6 +67,20 @@ func do_dialogue(key: String) -> void:
 		visible = true
 
 
-func _on_file_selected(_data_type: String, file_name: String) -> void:
+func _on_file_selected(file_name: String) -> void:
 	visible = false
 	target.text = "%s" % file_name
+	if target == line_edit_aperture:
+		remove_aperture.visible = true
+	elif target == line_edit_twiss:
+		remove_twiss.visible = true
+
+
+func _on_remove_aperture_pressed() -> void:
+	remove_aperture.visible = false
+	line_edit_aperture.text = ""
+
+
+func _on_remove_twiss_pressed() -> void:
+	remove_twiss.visible = false
+	line_edit_twiss.text = ""

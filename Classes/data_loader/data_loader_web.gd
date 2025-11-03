@@ -1,11 +1,10 @@
-class_name WebDataLoader
+class_name DataLoaderWeb
 extends RefCounted
 
 ## Handles loading CSV data on both native and web platforms
 ## On web, uses CSVStreamReader to stream data from JavaScript
 
-signal loading_complete(data_type: String, file_name: String)
-signal loading_progress(current: int, total: int)
+signal loading_complete(file_name: String)
 signal loading_error(message: String)
 
 var survey_reader: CSVStreamReader
@@ -107,14 +106,14 @@ func clear_all() -> void:
 
 func _on_survey_opened(file_name: String, total_lines: int) -> void:
 	print("Survey file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("survey", file_name)
+	loading_complete.emit(file_name)
 
 
 func _on_apertures_opened(file_name: String, total_lines: int) -> void:
 	print("Apertures file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("apertures", file_name)
+	loading_complete.emit(file_name)
 
 
 func _on_twiss_opened(file_name: String, total_lines: int) -> void:
 	print("Twiss file opened: %s (%d lines)" % [file_name, total_lines])
-	loading_complete.emit("twiss", file_name)
+	loading_complete.emit(file_name)
