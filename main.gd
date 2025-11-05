@@ -4,6 +4,7 @@ const APERTURE_THICKNESS_MODIFIER := 1.0
 const BEAM_THICKNESS_MODIFIER := 1.0
 
 @export var main_camera: Camera3D
+@export var beam_animator: BeamAnimationController
 
 @export var aperture_material: Material
 @export var beam_material: Material
@@ -194,12 +195,16 @@ func _on_beam_mesh_complete(mesh: ArrayMesh) -> void:
 		print("Beam mesh generated.")
 		beam_mesh_instance = MeshInstance3D.new()
 		beam_mesh_instance.name = "Twiss"
-		mesh.surface_set_material(0, beam_material)
 		beam_mesh_instance.mesh = mesh
+		beam_mesh_instance.set_surface_override_material(0, preload("res://Assets/beam_envelope.tres").duplicate())
 		add_child(beam_mesh_instance)
 		beam_progress.value = beam_progress.max_value
+		
 	beam_thread.wait_to_finish()
 	_progress_success_animation(beam_progress_container)
+	
+	beam_animator.beam_mesh_instance = beam_mesh_instance
+	beam_animator.start_animation()
 
 
 func _on_element_meshes_complete() -> void:

@@ -1,7 +1,8 @@
-[gd_scene load_steps=12 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=13 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
+[ext_resource type="Script" uid="uid://7tlova7hhuhn" path="res://Classes/animation/beam_animator.gd" id="3_21xkr"]
 [ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://import_file_dialog.gd" id="4_jjvhh"]
 [ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://import.gd" id="4_kry3j"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
@@ -64,9 +65,10 @@ current = true
 script = ExtResource("2_bo1nx")
 movement_smoothing = 0.999
 
-[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("main_camera", "aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
+[node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("main_camera", "beam_animator", "aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
 script = ExtResource("1_jjgbg")
 main_camera = NodePath("../Camera3D")
+beam_animator = NodePath("../BeamAnimator")
 aperture_material = SubResource("StandardMaterial3D_kry3j")
 beam_material = SubResource("StandardMaterial3D_8gbba")
 aperture_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer")
@@ -84,6 +86,10 @@ load_apertures_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HB
 load_twiss_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
 start_build_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/Import")
 status_label = NodePath("../ImportMenu/MarginContainer/VBoxContainer/ErrorText")
+
+[node name="BeamAnimator" type="Node3D" parent="."]
+script = ExtResource("3_21xkr")
+fill_duration = 20.0
 
 [node name="LoadedLayer" type="CanvasLayer" parent="."]
 visible = false

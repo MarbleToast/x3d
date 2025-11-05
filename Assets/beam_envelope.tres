@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://d0nuyliakicy8"]
+
+[ext_resource type="Shader" uid="uid://bdplmoad6k3mk" path="res://Assets/beam_envelope_animated.gdshader" id="1_tg7yj"]
+
+[resource]
+render_priority = 1
+shader = ExtResource("1_tg7yj")
+shader_parameter/fill_progress = 0.0
+shader_parameter/fill_color = Color(1, 0, 1, 1)
+shader_parameter/feather = 0.02
