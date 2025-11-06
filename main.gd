@@ -111,14 +111,18 @@ func start_building() -> void:
 		if c is MeshInstance3D or c is StaticBody3D:
 			c.queue_free()
 
-	_start_aperture_thread()
-	_start_beam_thread()
+	if apertures_path:
+		_start_aperture_thread()
+		aperture_progress_container.visible = true
+		
+	if twiss_path:
+		_start_beam_thread()
+		beam_progress_container.visible = true
+	
 	_start_magnets_thread()
 
 
 func _setup_progress_bars() -> void:
-	aperture_progress_container.visible = true
-	beam_progress_container.visible = true
 	element_progress_container.visible = true
 
 	if mesh_builder is MeshBuilderWeb:
