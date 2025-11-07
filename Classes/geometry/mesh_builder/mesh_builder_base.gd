@@ -11,13 +11,15 @@ const ELEMENT_DIMENSIONS := {
 	Drift = { width = 0.2, height = 0.2, type = "box" },
 	DriftSlice = { width = 0.2, height = 0.2, type = "box" },
 	Quadrupole = { 
-		type = "quadrupole", 
+		type = "quadrupole",
+		width = 0.3, 
+		height = 0.3,
 		aperture_radius = 0.05, 
 		pole_width = 0.08, 
 		pole_tip_width = 0.06, 
 		yoke_inner_radius = 0.2, 
 		yoke_outer_radius = 0.25, 
-		custom = true 
+		custom = true
 	},
 	Bend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
 	RBend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
@@ -38,6 +40,7 @@ var _base_material_cache := {}
 var _collision_shape_cache := {}
 var _basis_cache := {}
 var _ring_cache := {}
+var _mesh_cache := {}
 
 
 # ===================== Cache Accessors
@@ -57,22 +60,18 @@ func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
 	return _basis_cache[key]
 
 
-## TODO: actually have this cache properly - hashing the whole line means no hits
-func get_points_2d_cached(
-	data_line: PackedStringArray,
-	get_points_func: Callable
-) -> Array[Vector2]:
-	var line_hash := hash(data_line)
-	if not _ring_cache.has(line_hash):
-		_ring_cache[line_hash] = get_points_func.call(data_line)
-	return _ring_cache[line_hash]
-
-
 # ===================== Mesh Geometry Utilities
 func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Array[Vector2]:
 	var twiss := DataLoader.parse_twiss_line(twiss_line)
 	if not twiss:
 		return []
+		
+	var res: Array[Vector2]
+	
+	var key := "%s_%s" % [twiss.position, twiss.sigma]
+	if _ring_cache.has(key):
+		res.assign(_ring_cache[key])
+		return res
 
 	var pts: Array[Vector2] = []
 	var center: Vector2 = twiss.position
@@ -83,9 +82,10 @@ func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: floa
 		var angle := i * step
 		pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
 	
-	var result: Array[Vector2]
-	result.assign(pts.map(func(v): return v * thickness_modifier))
-	return result
+	_ring_cache[key] = pts.map(func(v): return v * thickness_modifier)
+
+	res.assign(_ring_cache[key])
+	return res
 
 
 func calculate_curvature(
@@ -109,12 +109,22 @@ func create_element_mesh(
 	thickness_modifier: float = 1.0,
 	add_caps: bool = true,
 ) -> Mesh:
+	var curvature := calculate_curvature(start_rotation, end_rotation, length)
+	var key := "%s_%.4f_%.3f" % [type, length, snappedf(curvature, 0.01)]
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
+	
 	var dimensions: Dictionary = ELEMENT_DIMENSIONS.get(type, ELEMENT_DIMENSIONS._default)
+	var mesh: Mesh
+	
 	if dimensions.has("custom"):
-		return CustomMeshFactory.create_custom_mesh(type, dimensions, length, start_rotation, thickness_modifier)
-		
-	var cross_section_func := CrossSectionFactory.get_cross_section_func(type, thickness_modifier, dimensions)
-	return MeshGeometry.extrude_cross_sections(cross_section_func, length, start_rotation, end_rotation, 8, add_caps)
+		mesh = CustomMeshFactory.create_custom_mesh(type, dimensions, length, start_rotation, thickness_modifier)
+	else:
+		var cross_section_func := CrossSectionFactory.get_cross_section_func(type, thickness_modifier, dimensions)
+		mesh = MeshGeometry.extrude_cross_sections(cross_section_func, length, start_rotation, end_rotation, 8, add_caps)
+	
+	_mesh_cache[key] = mesh
+	return mesh
 
 
 func get_collision_shape_for_element(
@@ -189,15 +199,14 @@ func _add_multipole_kick(
 	var kick_mesh := create_element_mesh("MultipoleKick", 0.0, start_rotation, end_rotation, thickness_modifier, true)
 	var kick_color := ElementColors.get_element_color("MultipoleKick")
 	var kick_mat := get_base_material(aperture_material, kick_color).duplicate()
-	kick_mesh.surface_set_material(0, kick_mat)
 	
 	var kick_collision := CollisionShape3D.new()
 	kick_collision.shape = get_collision_shape_for_element("MultipoleKick", 0.02, thickness_modifier, start_rotation, end_rotation, kick_mesh)
-	kick_collision.transform = Transform3D(start_rotation)
 	kick_collision.rotation.x = PI / 2.0
 	
 	var kick_instance := ElementMeshInstance.new()
 	kick_instance.mesh = kick_mesh
+	kick_instance.material_override = kick_mat
 	kick_instance.name = "box"
 	kick_instance.type = "MultipoleKick"
 	kick_instance.first_slice_name = slice.name + " (Kick)"
@@ -205,7 +214,7 @@ func _add_multipole_kick(
 	
 	var kick_body := StaticBody3D.new()
 	kick_body.name = "Multipole_%s_kick" % slice.name
-	kick_body.transform = Transform3D(Basis.IDENTITY, parent_pos + start_rotation * Vector3(0, 0, -slice.length/2))
+	kick_body.transform = Transform3D(start_rotation, parent_pos + start_rotation * Vector3(0, 0, -slice.length/2))
 	
 	kick_body.add_child(kick_instance)
 	kick_body.add_child(kick_collision)

@@ -15,6 +15,9 @@ func build_box_meshes(
 
 	for i in range(survey_data.size()):
 		var slice := survey_data[i]
+		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
+			continue
+
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
 		var end_rotation := start_rotation
 		
@@ -27,10 +30,10 @@ func build_box_meshes(
 		
 		var colour := ElementColors.get_element_color(slice.element_type)
 		var mat := get_base_material(aperture_material, colour).duplicate()
-		box.surface_set_material(0, mat)
 		
 		var mesh_instance := ElementMeshInstance.new()
 		mesh_instance.mesh = box
+		mesh_instance.material_override = mat
 		mesh_instance.name = "box"
 		mesh_instance.type = slice.element_type
 		mesh_instance.first_slice_name = slice.name
@@ -38,11 +41,10 @@ func build_box_meshes(
 		
 		var static_body := StaticBody3D.new()
 		static_body.name = "Box_%d_%s" % [i, slice.element_type]
-		static_body.transform = Transform3D(Basis.IDENTITY, box_position)
+		static_body.transform = Transform3D(start_rotation, box_position)
 		
 		var collision_shape := CollisionShape3D.new()
 		collision_shape.shape = get_collision_shape_for_element(slice.element_type, slice.length, thickness_modifier, start_rotation, end_rotation, box)
-		collision_shape.transform = Transform3D(start_rotation)
 		if collision_shape.shape is CylinderShape3D:
 			collision_shape.rotation.x = PI / 2.0
 		

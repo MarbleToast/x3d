@@ -21,8 +21,8 @@ static func create(
 	var yoke_inner := yoke_inner_radius * thickness_modifier
 	var yoke_outer := yoke_outer_radius * thickness_modifier
 	
-	_build_poles(st, length, start_rotation, ap_r, pole_w, tip_w)
-	HollowCylinderBuilder.add_to_surface(st, yoke_inner, yoke_outer, length, start_rotation)
+	_build_poles(st, length, start_rotation, ap_r, pole_w, tip_w, PI / 4)
+	HollowCylinderBuilder.add_to_surface(st, yoke_inner, yoke_outer, length, start_rotation, 4, PI / 4)
 	
 	st.index()
 	st.generate_normals()
@@ -35,13 +35,14 @@ static func _build_poles(
 	start_rotation: Basis,
 	aperture_radius: float,
 	pole_width: float,
-	pole_tip_width: float
+	pole_tip_width: float,
+	phase_offset: float = 0
 ) -> void:
 	var half_len := length * 0.5
 	var start_tangent := start_rotation.z
 	
 	for pole_idx in 4:
-		var angle := TAU * float(pole_idx) / 4.0
+		var angle := TAU * float(pole_idx) / 4.0 + phase_offset
 		var pole_dir := Vector2(cos(angle), sin(angle))
 		var pole_perp := Vector2(-pole_dir.y, pole_dir.x)
 		
@@ -66,4 +67,4 @@ static func _build_poles(
 			front_ring.append(pos_3d + start_tangent * half_len)
 			back_ring.append(pos_3d - start_tangent * half_len)
 		
-		MeshGeometry.extrude_shape_with_caps(st, front_ring, back_ring)
+		MeshGeometry.extrude_shape(st, front_ring, back_ring, true)

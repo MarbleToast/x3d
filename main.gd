@@ -56,9 +56,9 @@ var mesh_builder: MeshBuilderBase
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
-			var old_mat := selected_aperture_mesh.mesh.surface_get_material(0) as StandardMaterial3D
+			var old_mat := selected_aperture_mesh.get_active_material(0) as StandardMaterial3D
 			old_mat.albedo_color = old_mat.albedo_color / 10.0
-		var new_mat := value.mesh.surface_get_material(0) as StandardMaterial3D
+		var new_mat := value.get_active_material(0) as StandardMaterial3D
 		new_mat.albedo_color = new_mat.albedo_color * 10.0
 		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
 		selected_aperture_mesh = value
@@ -111,13 +111,11 @@ func start_building() -> void:
 		if c is MeshInstance3D or c is StaticBody3D:
 			c.queue_free()
 
-	if apertures_path:
-		_start_aperture_thread()
-		aperture_progress_container.visible = true
+	aperture_progress_container.visible = true
+	_start_aperture_thread()
 		
-	if twiss_path:
-		_start_beam_thread()
-		beam_progress_container.visible = true
+	beam_progress_container.visible = true
+	_start_beam_thread()
 	
 	_start_magnets_thread()
 

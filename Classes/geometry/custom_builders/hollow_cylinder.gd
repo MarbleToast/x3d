@@ -8,7 +8,8 @@ static func add_to_surface(
 	outer_radius: float,
 	length: float,
 	start_rotation: Basis,
-	radial_segments: int = 32
+	radial_segments: int = 32,
+	phase_offset: float = 0
 ) -> void:
 	var half_len := length * 0.5
 	var start_tangent := start_rotation.z
@@ -19,7 +20,7 @@ static func add_to_surface(
 	var inner_back: Array[Vector3] = []
 	
 	for i in range(radial_segments):
-		var angle := (float(i) / radial_segments) * TAU
+		var angle := (float(i) / radial_segments) * TAU + phase_offset
 		var cos_a := cos(angle)
 		var sin_a := sin(angle)
 		

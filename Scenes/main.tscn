@@ -22,7 +22,9 @@ radiance_size = 0
 [sub_resource type="Environment" id="Environment_8gbba"]
 background_mode = 2
 sky = SubResource("Sky_kry3j")
-ambient_light_source = 1
+ambient_light_source = 2
+ambient_light_color = Color(0.68859524, 0.68859535, 0.6885951, 1)
+ambient_light_energy = 2.0
 reflected_light_source = 1
 tonemap_exposure = 0.8
 
@@ -30,7 +32,6 @@ tonemap_exposure = 0.8
 transparency = 1
 cull_mode = 2
 depth_draw_mode = 2
-shading_mode = 0
 albedo_color = Color(0.43137255, 0.43137255, 0.43137255, 0.7019608)
 grow_amount = 2.176
 point_size = 5.0
@@ -93,6 +94,7 @@ script = ExtResource("3_21xkr")
 fill_duration = 20.0
 
 [node name="LoadedLayer" type="CanvasLayer" parent="."]
+visible = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
