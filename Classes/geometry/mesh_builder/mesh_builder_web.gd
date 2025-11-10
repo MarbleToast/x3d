@@ -72,8 +72,8 @@ func build_box_meshes(
 			progress_callback.call(i)
 	
 	print("Box mesh generation complete (streaming).")
-	print("Created %s shapes, %s materials, %s bases." % [
-		len(_collision_shape_cache), len(_base_material_cache), len(_basis_cache)
+	print("Created %s shapes, %s materials, %s bases, %s meshes." % [
+		len(_collision_shape_cache), len(_base_material_cache), len(_basis_cache), len(_mesh_cache)
 	])
 
 

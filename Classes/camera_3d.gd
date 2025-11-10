@@ -21,32 +21,34 @@ var _key_state: Dictionary = {
 	"move_down": false,
 }
 
+var do_input_handling: bool = false
 var _freelook_enabled: bool = false
 
 var euler_rotation: Vector3 = rotation
 var target_euler: Vector3 = rotation
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _freelook_enabled and event is InputEventMouseMotion:
-		var mouse_delta: Vector2 = event.relative
-		target_euler.x -= mouse_delta.y * rotation_speed
-		target_euler.y -= mouse_delta.x * rotation_speed
-		target_euler.x = clamp(target_euler.x, -PI/2, PI/2)
+	if do_input_handling:
+		if _freelook_enabled and event is InputEventMouseMotion:
+			var mouse_delta: Vector2 = event.relative
+			target_euler.x -= mouse_delta.y * rotation_speed
+			target_euler.y -= mouse_delta.x * rotation_speed
+			target_euler.x = clamp(target_euler.x, -PI/2, PI/2)
 
-	elif event is InputEventMouseButton:
-		match event.button_index:
-			MOUSE_BUTTON_RIGHT:
-				if event.pressed:
-					_freelook_enabled = !_freelook_enabled
-					Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if _freelook_enabled else Input.MOUSE_MODE_VISIBLE)
-			MOUSE_BUTTON_WHEEL_UP:
-				_vel_multiplier *= 1.1
-			MOUSE_BUTTON_WHEEL_DOWN:
-				_vel_multiplier = max(_vel_multiplier / 1.1, 0.2)
-	
-	elif event is InputEventKey and not event.is_echo():
-		if event.keycode in _key_state:
-			_key_state[event.keycode] = event.pressed
+		elif event is InputEventMouseButton:
+			match event.button_index:
+				MOUSE_BUTTON_RIGHT:
+					if event.pressed:
+						_freelook_enabled = !_freelook_enabled
+						Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if _freelook_enabled else Input.MOUSE_MODE_VISIBLE)
+				MOUSE_BUTTON_WHEEL_UP:
+					_vel_multiplier *= 1.1
+				MOUSE_BUTTON_WHEEL_DOWN:
+					_vel_multiplier = max(_vel_multiplier / 1.1, 0.2)
+		
+		elif event is InputEventKey and not event.is_echo():
+			if event.keycode in _key_state:
+				_key_state[event.keycode] = event.pressed
 
 
 func _process(delta: float) -> void:

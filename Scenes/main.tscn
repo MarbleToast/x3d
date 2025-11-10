@@ -1,10 +1,10 @@
 [gd_scene load_steps=13 format=3 uid="uid://dhffc1wkr2bjd"]
 
-[ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://main.gd" id="1_jjgbg"]
-[ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Scenes/camera_3d.gd" id="2_bo1nx"]
+[ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://Classes/manager.gd" id="1_jjgbg"]
+[ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Classes/camera_3d.gd" id="2_bo1nx"]
 [ext_resource type="Script" uid="uid://7tlova7hhuhn" path="res://Classes/animation/beam_animator.gd" id="3_21xkr"]
-[ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://import_file_dialog.gd" id="4_jjvhh"]
-[ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://import.gd" id="4_kry3j"]
+[ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://Classes/gui/import_file_dialog.gd" id="4_jjvhh"]
+[ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://Classes/gui/import_button.gd" id="4_kry3j"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjvhh"]
@@ -80,14 +80,18 @@ aperture_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer/Apertur
 beam_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer2/BeamProgress")
 element_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer3/ElementProgress")
 aperture_info = NodePath("../LoadedLayer/ApertureInfo")
-toggle_elements = NodePath("../LoadedLayer/HBoxContainer/ToggleElements")
-toggle_beam = NodePath("../LoadedLayer/HBoxContainer/ToggleBeam")
-toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/ToggleAperture")
+toggle_elements = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleElements")
+toggle_beam = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleBeam")
+toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleAperture")
 load_survey_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey")
 load_apertures_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture")
 load_twiss_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
 start_build_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/Import")
 status_label = NodePath("../ImportMenu/MarginContainer/VBoxContainer/ErrorText")
+
+[node name="Timer" type="Timer" parent="MeshManager"]
+wait_time = 0.1
+one_shot = true
 
 [node name="BeamAnimator" type="Node3D" parent="."]
 script = ExtResource("3_21xkr")
@@ -178,30 +182,53 @@ metadata/_edit_use_anchors_ = true
 [node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
 anchor_left = 0.008
-anchor_top = 0.933
-anchor_right = 0.362
+anchor_top = 0.89500004
+anchor_right = 0.36200002
 anchor_bottom = 0.985
 offset_left = 0.6399994
-offset_top = 0.35998535
-offset_right = 0.95996094
-offset_bottom = 0.19995117
+offset_top = 0.39996338
+offset_right = 0.9598999
+offset_bottom = 4.199951
 
-[node name="ToggleElements" type="Button" parent="LoadedLayer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Visualisation Scale"
+
+[node name="HSlider" type="HSlider" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+min_value = 0.001
+max_value = 2.0
+step = 0.1
+value = 1.001
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ToggleElements" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Elements"
 
-[node name="ToggleBeam" type="Button" parent="LoadedLayer/HBoxContainer"]
+[node name="ToggleBeam" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Beam"
 
-[node name="ToggleAperture" type="Button" parent="LoadedLayer/HBoxContainer"]
+[node name="ToggleAperture" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Apertures"
 
-[node name="ToggleImport" type="Button" parent="LoadedLayer/HBoxContainer"]
+[node name="ToggleImport" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Show Import Menu"
@@ -216,6 +243,8 @@ offset_left = -416.0
 offset_top = -128.0
 grow_horizontal = 0
 grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0.580362, 0.5803619, 0.5803622, 1)
+theme_override_constants/outline_size = 4
 text = "XSuite 3D visualiser by James Bradford
 WSAD to move
 SPACE to ascend, SHIFT to descend
@@ -312,7 +341,7 @@ text = "Clear"
 layout_mode = 2
 text = "Browse..."
 
-[node name="Import" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("mesh_manager", "line_edit_aperture", "line_edit_survey", "line_edit_twiss", "visualiser_canvas_layer", "menu_container", "error_text")]
+[node name="Import" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("mesh_manager", "line_edit_aperture", "line_edit_survey", "line_edit_twiss", "visualiser_canvas_layer", "menu_container", "main_camera", "error_text")]
 layout_mode = 2
 text = "Import"
 script = ExtResource("4_kry3j")
@@ -322,6 +351,7 @@ line_edit_survey = NodePath("../HBoxContainer2/LineEditSurvey")
 line_edit_twiss = NodePath("../HBoxContainer3/LineEditTwiss")
 visualiser_canvas_layer = NodePath("../../../../LoadedLayer")
 menu_container = NodePath("../../..")
+main_camera = NodePath("../../../../Camera3D")
 error_text = NodePath("../ErrorText")
 
 [node name="ErrorText" type="RichTextLabel" parent="ImportMenu/MarginContainer/VBoxContainer"]
@@ -348,7 +378,9 @@ remove_aperture = NodePath("../MarginContainer/VBoxContainer/HBoxContainer/Remov
 remove_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss")
 status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
-[connection signal="pressed" from="LoadedLayer/HBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_pressed"]
+[connection signal="timeout" from="MeshManager/Timer" to="MeshManager" method="_on_timer_timeout"]
+[connection signal="value_changed" from="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2/HSlider" to="MeshManager" method="_on_h_slider_value_changed"]
+[connection signal="toggled" from="LoadedLayer/HBoxContainer/VBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_toggled"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture" to="ImportMenu/FileDialog" method="_on_remove_aperture_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]

@@ -118,7 +118,7 @@ func create_element_mesh(
 	var mesh: Mesh
 	
 	if dimensions.has("custom"):
-		mesh = CustomMeshFactory.create_custom_mesh(type, dimensions, length, start_rotation, thickness_modifier)
+		mesh = CustomMeshFactory.create_custom_mesh(type, dimensions, length, Basis.IDENTITY, thickness_modifier)
 	else:
 		var cross_section_func := CrossSectionFactory.get_cross_section_func(type, thickness_modifier, dimensions)
 		mesh = MeshGeometry.extrude_cross_sections(cross_section_func, length, start_rotation, end_rotation, 8, add_caps)

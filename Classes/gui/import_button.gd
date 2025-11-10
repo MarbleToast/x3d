@@ -8,6 +8,7 @@ extends Button
 
 @export var visualiser_canvas_layer: CanvasLayer
 @export var menu_container: Control
+@export var main_camera: Camera3D
 
 @export var error_text: RichTextLabel
 
@@ -35,8 +36,10 @@ func _on_pressed() -> void:
 		error_text.visible = false
 		visualiser_canvas_layer.visible = true
 		menu_container.visible = false
+		main_camera.do_input_handling = true
 		mesh_manager.setup()
 
 
-func _on_toggle_import_pressed() -> void:
-	menu_container.visible = true
+func _on_toggle_import_toggled(toggled_on: bool) -> void:
+	menu_container.visible = toggled_on
+	main_camera.do_input_handling = not toggled_on

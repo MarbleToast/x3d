@@ -32,6 +32,8 @@ const BEAM_THICKNESS_MODIFIER := 1.0
 @export var start_build_button: Button
 @export var status_label: RichTextLabel
 
+@onready var scale_debounce_timer := $Timer
+
 signal aperture_mesh_complete(mesh: ArrayMesh)
 signal beam_mesh_complete(mesh: ArrayMesh)
 signal element_meshes_complete
@@ -53,6 +55,8 @@ var twiss_path: String
 # Builder abstraction
 var mesh_builder: MeshBuilderBase
 
+var pending_scale: float
+
 var selected_aperture_mesh: ElementMeshInstance:
 	set(value):
 		if selected_aperture_mesh:
@@ -60,9 +64,12 @@ var selected_aperture_mesh: ElementMeshInstance:
 			old_mat.albedo_color = old_mat.albedo_color / 10.0
 		var new_mat := value.get_active_material(0) as StandardMaterial3D
 		new_mat.albedo_color = new_mat.albedo_color * 10.0
-		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[font_size=18]%s[/font_size][/color]" % [value.first_slice_name, value.type, value.other_info]
+		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[/color][font_size=18]%s[/font_size]" % [
+			value.first_slice_name, 
+			value.type, 
+			value.pretty_print_info()
+		]
 		selected_aperture_mesh = value
-
 
 func _ready() -> void:
 	toggle_elements.set_pressed_no_signal(true)
@@ -110,12 +117,24 @@ func start_building() -> void:
 	for c in get_children():
 		if c is MeshInstance3D or c is StaticBody3D:
 			c.queue_free()
-
-	aperture_progress_container.visible = true
-	_start_aperture_thread()
+	
+	var cond_ap: bool
+	var cond_tw: bool
+	if mesh_builder is MeshBuilderWeb:
+		cond_ap = mesh_builder.web_loader.get_apertures_count() > 0
+		cond_tw = mesh_builder.web_loader.get_twiss_count() > 0
+	else:
+		cond_ap = not apertures_path.is_empty()
+		cond_tw = not twiss_path.is_empty()
+			
+	
+	if cond_ap:
+		aperture_progress_container.visible = true
+		_start_aperture_thread()
 		
-	beam_progress_container.visible = true
-	_start_beam_thread()
+	if cond_tw:
+		beam_progress_container.visible = true
+		_start_beam_thread()
 	
 	_start_magnets_thread()
 
@@ -267,3 +286,12 @@ func _exit_tree() -> void:
 			thread.wait_to_finish()
 	if mesh_builder is MeshBuilderWeb:
 		(mesh_builder as MeshBuilderWeb).web_loader.clear_all()
+
+
+func _on_h_slider_value_changed(value: float) -> void:
+	pending_scale = value
+	scale_debounce_timer.start()
+
+
+func _on_timer_timeout() -> void:
+	scale = Vector3.ONE * pending_scale

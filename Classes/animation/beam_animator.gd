@@ -4,7 +4,7 @@ extends Node3D
 var beam_mesh_instance: MeshInstance3D:
 	set(value):
 		beam_mesh_instance = value
-		_beam_material = beam_mesh_instance.get_surface_override_material(0)
+		_beam_material = beam_mesh_instance.get_active_material(0)
 
 var _beam_material: ShaderMaterial
 @export var fill_duration: float = 10.0

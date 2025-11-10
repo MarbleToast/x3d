@@ -12,7 +12,6 @@ static func extrude_cross_sections(
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
-	# Compute curvature angle from tangent difference
 	var start_tangent := start_rotation.z
 	var end_tangent := end_rotation.z
 	var rotation_axis := start_tangent.cross(end_tangent)
@@ -20,13 +19,9 @@ static func extrude_cross_sections(
 
 	var cross_sections_2d: Array[Array] = cross_section_func.call()
 
-	# Canonical extrusion:
-	#   Straight → +Z forward, X/Y cross-section
-	#   Curved → bend in YZ plane around +X (canonical)
 	if bend_angle < 1e-6 or rotation_axis.length_squared() < 1e-12:
 		_extrude_straight_canonical(st, cross_sections_2d, length, add_caps)
 	else:
-		# Use the same curved math as before but with start_rotation = IDENTITY and rotation_axis derived
 		_extrude_curved_canonical(st, cross_sections_2d, length, bend_angle, segments, add_caps)
 
 	st.index()
@@ -34,9 +29,6 @@ static func extrude_cross_sections(
 	return st.commit()
 
 
-# ================================
-#  Canonical Extrusion (Straight)
-# ================================
 static func _extrude_straight_canonical(
 	st: SurfaceTool,
 	cross_sections_2d: Array[Array],
@@ -49,18 +41,12 @@ static func _extrude_straight_canonical(
 		var front_ring: Array[Vector3] = []
 		var back_ring: Array[Vector3] = []
 		for p in cross_section_2d:
-			# Canonical: +Z forward, X/Y are cross-section
 			var pos_3d := Vector3(p.x, p.y, 0)
 			front_ring.append(pos_3d + Vector3(0, 0, half_len))
 			back_ring.append(pos_3d - Vector3(0, 0, half_len))
 		extrude_shape(st, front_ring, back_ring, add_caps)
 
 
-# ==========================================
-#  Canonical Extrusion (Curved along +X)
-#  (Uses same pattern as original _extrude_curved,
-#   but with start_rotation = IDENTITY and rotation_axis = +X)
-# ==========================================
 static func _extrude_curved_canonical(
 	st: SurfaceTool,
 	cross_sections_2d: Array[Array],
@@ -69,14 +55,10 @@ static func _extrude_curved_canonical(
 	segments: int,
 	add_caps: bool
 ) -> void:
-	# canonical start_tangent = +Z
 	var start_rotation := Basis.IDENTITY
 	var start_tangent := Vector3(0, 0, 1)
-	# canonical rotation axis (bend around +X)
 	var rotation_axis := Vector3(0, -1, 0)
 
-	# to_center matches original logic:
-	# to_center = start_tangent.cross(rotation_axis).normalized() * radius
 	var radius := arc_length / bend_angle
 	var to_center := start_tangent.cross(rotation_axis).normalized() * radius
 
@@ -87,7 +69,6 @@ static func _extrude_curved_canonical(
 		var current_to_center := to_center.rotated(rotation_axis, angle)
 		var center_pos := current_to_center - to_center
 
-		# local_right/local_up follows original pattern but with IDENTITY start_rotation
 		var local_right := start_rotation.x.rotated(rotation_axis, angle)
 		var local_up := start_rotation.y.rotated(rotation_axis, angle)
 
@@ -100,7 +81,6 @@ static func _extrude_curved_canonical(
 			seg_rings.append(ring)
 		all_rings.append(seg_rings)
 
-	# Center the mesh (so canonical object origin is the mid point)
 	var mid_angle := bend_angle * 0.5
 	var mid_to_center := to_center.rotated(rotation_axis, mid_angle)
 	var mid_pos := mid_to_center - to_center
@@ -109,7 +89,6 @@ static func _extrude_curved_canonical(
 			for k in range(ring.size()):
 				ring[k] -= mid_pos
 
-	# Stitch segments
 	for seg in range(segments):
 		var rings_a := all_rings[seg]
 		var rings_b := all_rings[seg + 1]
@@ -118,7 +97,6 @@ static func _extrude_curved_canonical(
 			var ring_b: Array[Vector3] = rings_b[ring_idx]
 			_stitch_rings(st, ring_a, ring_b)
 
-	# Caps
 	if add_caps:
 		for ring_idx in cross_sections_2d.size():
 			add_filled_caps(st, all_rings[0][ring_idx], all_rings[segments][ring_idx])
