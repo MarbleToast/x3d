@@ -98,3 +98,7 @@ func reset_position() -> void:
 	euler_rotation = _initial_rotation
 	target_euler = _initial_rotation
 	_vel_multiplier = 4.0
+
+
+func _on_edit_element_button_toggled(toggled_on: bool) -> void:
+	pass # Replace with function body.

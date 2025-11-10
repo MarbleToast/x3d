@@ -57,10 +57,10 @@ var mesh_builder: MeshBuilderBase
 
 var pending_scale: float
 
-var selected_aperture_mesh: ElementMeshInstance:
+var selected_element_mesh: ElementMeshInstance:
 	set(value):
-		if selected_aperture_mesh:
-			var old_mat := selected_aperture_mesh.get_active_material(0) as StandardMaterial3D
+		if selected_element_mesh:
+			var old_mat := selected_element_mesh.get_active_material(0) as StandardMaterial3D
 			old_mat.albedo_color = old_mat.albedo_color / 10.0
 		var new_mat := value.get_active_material(0) as StandardMaterial3D
 		new_mat.albedo_color = new_mat.albedo_color * 10.0
@@ -69,7 +69,7 @@ var selected_aperture_mesh: ElementMeshInstance:
 			value.type, 
 			value.pretty_print_info()
 		]
-		selected_aperture_mesh = value
+		selected_element_mesh = value
 
 func _ready() -> void:
 	toggle_elements.set_pressed_no_signal(true)
@@ -137,6 +137,30 @@ func start_building() -> void:
 		_start_beam_thread()
 	
 	_start_magnets_thread()
+
+
+func regenerate_mesh(
+	element: ElementMeshInstance,
+	type: String,
+	length: float,
+	pos: Vector3, 
+	start_psi: float, start_theta: float, start_phi: float,	
+):
+	var start_rotation := mesh_builder.get_cached_basis(start_psi, start_theta, start_phi)
+	var end_rotation := mesh_builder.get_cached_basis(element.other_info.end_psi, element.other_info.end_theta, element.other_info.end_phi)
+	element.mesh = mesh_builder.create_element_mesh(
+		element.type,
+		length,
+		start_rotation,
+		end_rotation
+	)
+	element.get_parent().transform = Transform3D(
+		start_rotation,
+		mesh_builder._calculate_element_position({
+			length = length,
+			position = pos
+		}, start_rotation, end_rotation)
+	)
 
 
 func _setup_progress_bars() -> void:
@@ -252,7 +276,7 @@ func _add_box_static_body(static_body: StaticBody3D) -> void:
 
 func _on_aperture_mesh_clicked(_cam, event, _pos, _norm, _shape, caller: ElementMeshInstance) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		selected_aperture_mesh = caller
+		selected_element_mesh = caller
 
 
 func _progress_success_animation(container: Container) -> void:

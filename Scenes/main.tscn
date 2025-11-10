@@ -1,11 +1,13 @@
-[gd_scene load_steps=13 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=15 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://Classes/manager.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Classes/camera_3d.gd" id="2_bo1nx"]
 [ext_resource type="Script" uid="uid://7tlova7hhuhn" path="res://Classes/animation/beam_animator.gd" id="3_21xkr"]
 [ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://Classes/gui/import_file_dialog.gd" id="4_jjvhh"]
 [ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://Classes/gui/import_button.gd" id="4_kry3j"]
+[ext_resource type="Script" uid="uid://bhdki27n26nsy" path="res://Classes/gui/edit_element_button.gd" id="5_344ge"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="5_kry3j"]
+[ext_resource type="Script" uid="uid://bk0ypoxp0lbdv" path="res://Scenes/edit_element_menu_button.gd" id="6_ynf5e"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jjvhh"]
 sky_top_color = Color(0.182934, 0.441454, 0.492471, 1)
@@ -79,7 +81,7 @@ element_progress_container = NodePath("../LoadedLayer/VBoxContainer/HBoxContaine
 aperture_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer/ApertureProgress")
 beam_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer2/BeamProgress")
 element_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer3/ElementProgress")
-aperture_info = NodePath("../LoadedLayer/ApertureInfo")
+aperture_info = NodePath("../LoadedLayer/VBoxContainer2/ApertureInfo")
 toggle_elements = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleElements")
 toggle_beam = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleBeam")
 toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleAperture")
@@ -163,21 +165,33 @@ stretch_margin_left = 50
 stretch_margin_top = 50
 texture_progress = ExtResource("5_kry3j")
 
-[node name="ApertureInfo" type="RichTextLabel" parent="LoadedLayer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
-anchor_left = 0.80308336
-anchor_top = 0.012
-anchor_right = 0.992
-anchor_bottom = 0.9849259
-offset_left = -0.92004395
-offset_top = 0.03999996
-offset_right = -0.6401367
-offset_bottom = 0.2800293
+anchor_left = 0.81500006
+anchor_top = 0.003
+anchor_right = 0.998
+anchor_bottom = 0.70100003
+offset_left = 0.19995117
+offset_top = -0.24000001
+offset_right = 0.8399658
+offset_bottom = -0.08001709
+
+[node name="ApertureInfo" type="RichTextLabel" parent="LoadedLayer/VBoxContainer2"]
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_colors/font_outline_color = Color(0.580362, 0.5803619, 0.5803622, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 metadata/_edit_use_anchors_ = true
+
+[node name="EditElementButton" type="Button" parent="LoadedLayer/VBoxContainer2" node_paths=PackedStringArray("edit_element_menu")]
+visible = false
+layout_mode = 2
+toggle_mode = true
+text = "Edit Element"
+script = ExtResource("5_344ge")
+edit_element_menu = NodePath("../../EditElementMenu")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
@@ -250,6 +264,157 @@ WSAD to move
 SPACE to ascend, SHIFT to descend
 LMB to view element data, RMB to toggle freelook
 Scroll wheel to increase/decrease speed"
+
+[node name="EditElementMenu" type="PanelContainer" parent="LoadedLayer"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.5
+offset_top = -118.0
+offset_right = 270.5
+offset_bottom = 118.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="LoadedLayer/EditElementMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer/EditElementMenu/MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="RichTextLabel" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+bbcode_enabled = true
+text = "Position"
+fit_content = true
+scroll_active = false
+
+[node name="Label2" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "X"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditX" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label3" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Y"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditY" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label4" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Z"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditZ" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Rotation"
+
+[node name="Label2" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ψ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditPsi" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label3" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "θ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditTheta" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label4" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ɸ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditPhi" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Length"
+
+[node name="LineEditLength" type="SpinBox" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RebuildMesh" type="Button" parent="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("x", "y", "z", "psi", "theta", "phi", "length", "mesh_manager")]
+layout_mode = 2
+toggle_mode = true
+text = "Rebuild Mesh"
+script = ExtResource("6_ynf5e")
+x = NodePath("../HBoxContainer2/LineEditX")
+y = NodePath("../HBoxContainer2/LineEditY")
+z = NodePath("../HBoxContainer2/LineEditZ")
+psi = NodePath("../HBoxContainer/LineEditPsi")
+theta = NodePath("../HBoxContainer/LineEditTheta")
+phi = NodePath("../HBoxContainer/LineEditPhi")
+length = NodePath("../HBoxContainer3/LineEditLength")
+mesh_manager = NodePath("../../../../../MeshManager")
+
+[node name="FileDialog" type="FileDialog" parent="LoadedLayer/EditElementMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss", "remove_aperture", "remove_twiss", "status_label")]
+oversampling_override = 1.0
+title = "Open a File"
+initial_position = 1
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.csv,*.tfs")
+use_native_dialog = true
+script = ExtResource("4_jjvhh")
+line_edit_aperture = NodePath("")
+line_edit_survey = NodePath("")
+line_edit_twiss = NodePath("")
+remove_aperture = NodePath("")
+remove_twiss = NodePath("")
+status_label = NodePath("")
 
 [node name="ImportMenu" type="PanelContainer" parent="."]
 layout_mode = 1
@@ -379,8 +544,12 @@ remove_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/RemoveT
 status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
 [connection signal="timeout" from="MeshManager/Timer" to="MeshManager" method="_on_timer_timeout"]
+[connection signal="toggled" from="LoadedLayer/VBoxContainer2/EditElementButton" to="LoadedLayer/VBoxContainer2/EditElementButton" method="_on_toggled"]
 [connection signal="value_changed" from="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2/HSlider" to="MeshManager" method="_on_h_slider_value_changed"]
 [connection signal="toggled" from="LoadedLayer/HBoxContainer/VBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_toggled"]
+[connection signal="pressed" from="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_pressed"]
+[connection signal="visibility_changed" from="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_visibility_changed"]
+[connection signal="file_selected" from="LoadedLayer/EditElementMenu/FileDialog" to="LoadedLayer/EditElementMenu/FileDialog" method="_on_file_selected"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture" to="ImportMenu/FileDialog" method="_on_remove_aperture_pressed"]
 [connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]

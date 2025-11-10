@@ -13,3 +13,5 @@ func pretty_print_info() -> String:
 		
 		s += "%s: %s\n" % [k.capitalize(), other_info[k]]
 	return s
+
+	
