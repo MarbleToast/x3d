@@ -1,6 +1,7 @@
 extends Camera3D
 
-@export var rotation_speed: float = 0.003
+@export var perspective_rotation_speed: float = 0.003
+@export var orthographic_rotation_speed_modifier: float = 0.1
 @export var movement_smoothing: float = 0.15
 @export var rotation_smoothing: float = 0.15
 
@@ -31,6 +32,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if do_input_handling:
 		if _freelook_enabled and event is InputEventMouseMotion:
 			var mouse_delta: Vector2 = event.relative
+			var rotation_speed := perspective_rotation_speed if projection == ProjectionType.PROJECTION_PERSPECTIVE\
+								  else (perspective_rotation_speed / size) * orthographic_rotation_speed_modifier
 			target_euler.x -= mouse_delta.y * rotation_speed
 			target_euler.y -= mouse_delta.x * rotation_speed
 			target_euler.x = clamp(target_euler.x, -PI/2, PI/2)
@@ -42,9 +45,16 @@ func _unhandled_input(event: InputEvent) -> void:
 						_freelook_enabled = !_freelook_enabled
 						Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED if _freelook_enabled else Input.MOUSE_MODE_VISIBLE)
 				MOUSE_BUTTON_WHEEL_UP:
-					_vel_multiplier *= 1.1
+					if projection == ProjectionType.PROJECTION_PERSPECTIVE:
+						_vel_multiplier *= 1.1
+					else:
+						size *= 1.1
 				MOUSE_BUTTON_WHEEL_DOWN:
-					_vel_multiplier = max(_vel_multiplier / 1.1, 0.2)
+					if projection == ProjectionType.PROJECTION_PERSPECTIVE:
+						_vel_multiplier = max(_vel_multiplier / 1.1, 0.2)
+					else:
+						size = max(size / 1.1, 1.0)
+					
 		
 		elif event is InputEventKey and not event.is_echo():
 			if event.keycode in _key_state:
@@ -100,5 +110,5 @@ func reset_position() -> void:
 	_vel_multiplier = 4.0
 
 
-func _on_edit_element_button_toggled(toggled_on: bool) -> void:
-	pass # Replace with function body.
+func _on_camera_options_item_selected(index: int) -> void:
+	projection = [ProjectionType.PROJECTION_PERSPECTIVE, ProjectionType.PROJECTION_ORTHOGONAL][index]

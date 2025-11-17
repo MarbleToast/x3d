@@ -65,8 +65,10 @@ mouse_filter = 2
 transform = Transform3D(-2.1855695e-07, 0, 1, 0, 1, 0, -1, 0, -2.1855695e-07, 4, 2, 0)
 environment = SubResource("Environment_8gbba")
 current = true
-near = 0.01
+size = 50.0
+near = 0.001
 script = ExtResource("2_bo1nx")
+orthographic_rotation_speed_modifier = 2.0
 movement_smoothing = 0.999
 
 [node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("main_camera", "beam_animator", "aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "aperture_info", "toggle_elements", "toggle_beam", "toggle_apertures", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label")]
@@ -82,9 +84,9 @@ aperture_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer/Apertur
 beam_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer2/BeamProgress")
 element_progress = NodePath("../LoadedLayer/VBoxContainer/HBoxContainer3/ElementProgress")
 aperture_info = NodePath("../LoadedLayer/VBoxContainer2/ApertureInfo")
-toggle_elements = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleElements")
-toggle_beam = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleBeam")
-toggle_apertures = NodePath("../LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleAperture")
+toggle_elements = NodePath("../LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleElements")
+toggle_beam = NodePath("../LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleBeam")
+toggle_apertures = NodePath("../LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer/ToggleAperture")
 load_survey_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey")
 load_apertures_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture")
 load_twiss_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
@@ -100,7 +102,6 @@ script = ExtResource("3_21xkr")
 fill_duration = 20.0
 
 [node name="LoadedLayer" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
@@ -193,29 +194,53 @@ text = "Edit Element"
 script = ExtResource("5_344ge")
 edit_element_menu = NodePath("../../EditElementMenu")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer"]
-anchors_preset = -1
-anchor_left = 0.008
-anchor_top = 0.89500004
-anchor_right = 0.36200002
-anchor_bottom = 0.985
-offset_left = 0.6399994
-offset_top = 0.39996338
-offset_right = 0.9598999
-offset_bottom = 4.199951
+[node name="MarginContainer" type="MarginContainer" parent="LoadedLayer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -120.0
+offset_right = 389.0
+grow_vertical = 0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 20
 
-[node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer/HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/MarginContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="Label" type="Label" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
+size_flags_horizontal = 3
+text = "Camera Type"
+
+[node name="CameraOptions" type="OptionButton" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+selected = 0
+item_count = 2
+popup/item_0/text = "Perspective"
+popup/item_0/id = 0
+popup/item_1/text = "Orthographic"
+popup/item_1/id = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
 text = "Visualisation Scale"
 
-[node name="HSlider" type="HSlider" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HSlider" type="HSlider" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -224,25 +249,25 @@ max_value = 2.0
 step = 0.1
 value = 1.001
 
-[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="ToggleElements" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="ToggleElements" type="Button" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Elements"
 
-[node name="ToggleBeam" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="ToggleBeam" type="Button" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Beam"
 
-[node name="ToggleAperture" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="ToggleAperture" type="Button" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Toggle Apertures"
 
-[node name="ToggleImport" type="Button" parent="LoadedLayer/HBoxContainer/VBoxContainer"]
+[node name="ToggleImport" type="Button" parent="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 toggle_mode = true
 text = "Show Import Menu"
@@ -400,7 +425,7 @@ phi = NodePath("../HBoxContainer/LineEditPhi")
 length = NodePath("../HBoxContainer3/LineEditLength")
 mesh_manager = NodePath("../../../../../MeshManager")
 
-[node name="FileDialog" type="FileDialog" parent="LoadedLayer/EditElementMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss", "remove_aperture", "remove_twiss", "status_label")]
+[node name="FileDialog" type="FileDialog" parent="LoadedLayer/EditElementMenu"]
 oversampling_override = 1.0
 title = "Open a File"
 initial_position = 1
@@ -409,12 +434,6 @@ access = 2
 filters = PackedStringArray("*.csv,*.tfs")
 use_native_dialog = true
 script = ExtResource("4_jjvhh")
-line_edit_aperture = NodePath("")
-line_edit_survey = NodePath("")
-line_edit_twiss = NodePath("")
-remove_aperture = NodePath("")
-remove_twiss = NodePath("")
-status_label = NodePath("")
 
 [node name="ImportMenu" type="PanelContainer" parent="."]
 layout_mode = 1
@@ -545,8 +564,9 @@ status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
 [connection signal="timeout" from="MeshManager/Timer" to="MeshManager" method="_on_timer_timeout"]
 [connection signal="toggled" from="LoadedLayer/VBoxContainer2/EditElementButton" to="LoadedLayer/VBoxContainer2/EditElementButton" method="_on_toggled"]
-[connection signal="value_changed" from="LoadedLayer/HBoxContainer/VBoxContainer/HBoxContainer2/HSlider" to="MeshManager" method="_on_h_slider_value_changed"]
-[connection signal="toggled" from="LoadedLayer/HBoxContainer/VBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_toggled"]
+[connection signal="item_selected" from="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer3/CameraOptions" to="Camera3D" method="_on_camera_options_item_selected"]
+[connection signal="value_changed" from="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2/HSlider" to="MeshManager" method="_on_h_slider_value_changed"]
+[connection signal="toggled" from="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/ToggleImport" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_toggle_import_toggled"]
 [connection signal="pressed" from="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_pressed"]
 [connection signal="visibility_changed" from="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="LoadedLayer/EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_visibility_changed"]
 [connection signal="file_selected" from="LoadedLayer/EditElementMenu/FileDialog" to="LoadedLayer/EditElementMenu/FileDialog" method="_on_file_selected"]
