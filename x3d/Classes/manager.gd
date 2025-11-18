@@ -64,10 +64,11 @@ var selected_element_mesh: ElementMeshInstance:
 			old_mat.albedo_color = old_mat.albedo_color / 10.0
 		var new_mat := value.get_active_material(0) as StandardMaterial3D
 		new_mat.albedo_color = new_mat.albedo_color * 10.0
-		aperture_info.text = "[font_size=26]%s[/font_size][color=#fbb]\n%s\n[/color][font_size=18]%s[/font_size]" % [
+		aperture_info.text = "[font_size=26]%s[/font_size]\n[color=#fbb]%s[/color]\n[font_size=18]%s[/font_size][color=dodgerblue][url=https://xsuite.readthedocs.io/en/latest/apireference.html#%s]Go to Docs[/url][/color]" % [
 			value.first_slice_name, 
 			value.type, 
-			value.pretty_print_info()
+			value.pretty_print_info(),
+			value.type.to_lower() if "Slice" not in value.type else value.type.trim_suffix("Slice").to_lower()
 		]
 		selected_element_mesh = value
 
@@ -319,3 +320,7 @@ func _on_h_slider_value_changed(value: float) -> void:
 
 func _on_timer_timeout() -> void:
 	scale = Vector3.ONE * pending_scale
+
+
+func _on_aperture_info_meta_clicked(meta: Variant) -> void:
+	OS.shell_open(str(meta))

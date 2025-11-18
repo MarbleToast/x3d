@@ -60,6 +60,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+metadata/_edit_horizontal_guides_ = [16.0]
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(-2.1855695e-07, 0, 1, 0, 1, 0, -1, 0, -2.1855695e-07, 4, 2, 0)
@@ -102,7 +103,6 @@ script = ExtResource("3_21xkr")
 fill_duration = 20.0
 
 [node name="LoadedLayer" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
@@ -170,13 +170,13 @@ texture_progress = ExtResource("5_kry3j")
 [node name="VBoxContainer2" type="VBoxContainer" parent="LoadedLayer"]
 anchors_preset = -1
 anchor_left = 0.81500006
-anchor_top = 0.003
+anchor_top = 0.014
 anchor_right = 0.998
-anchor_bottom = 0.70100003
+anchor_bottom = 0.712
 offset_left = 0.19995117
-offset_top = -0.24000001
+offset_top = -0.12000084
 offset_right = 0.8399658
-offset_bottom = -0.08001709
+offset_bottom = 0.039978027
 
 [node name="ApertureInfo" type="RichTextLabel" parent="LoadedLayer/VBoxContainer2"]
 layout_mode = 2
@@ -564,6 +564,7 @@ remove_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/RemoveT
 status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
 [connection signal="timeout" from="MeshManager/Timer" to="MeshManager" method="_on_timer_timeout"]
+[connection signal="meta_clicked" from="LoadedLayer/VBoxContainer2/ApertureInfo" to="MeshManager" method="_on_aperture_info_meta_clicked"]
 [connection signal="toggled" from="LoadedLayer/VBoxContainer2/EditElementButton" to="LoadedLayer/VBoxContainer2/EditElementButton" method="_on_toggled"]
 [connection signal="item_selected" from="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer3/CameraOptions" to="Camera3D" method="_on_camera_options_item_selected"]
 [connection signal="value_changed" from="LoadedLayer/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2/HSlider" to="MeshManager" method="_on_h_slider_value_changed"]
