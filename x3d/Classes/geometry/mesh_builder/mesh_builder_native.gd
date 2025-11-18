@@ -5,6 +5,8 @@ var survey_data: Array[Dictionary]
 var aperture_path: String
 var twiss_path: String
 
+const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
+
 func build_box_meshes(
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
@@ -73,11 +75,13 @@ func build_sweep_mesh(
 ) -> ArrayMesh:
 	var line_data := DataLoader.load_csv(path)
 	
+	var meshes: Array[ArrayMesh] = []
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
 	var has_prev := false
 	var prev_verts: Array[Vector3] = []
+	var vertex_count := 0
 	
 	for aperture_index in range(len(line_data)):
 		var data_line := line_data[aperture_index]
@@ -95,13 +99,46 @@ func build_sweep_mesh(
 			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
 		
 		if has_prev:
-			st.add_triangle_fan(_stitch_rings(prev_verts, curr_verts))
+			var fan = _stitch_rings(prev_verts, curr_verts)
+			st.add_triangle_fan(fan)
+			vertex_count += fan.size()
+			
+			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
+				_finalize_mesh_chunk(st, meshes)
+				st = SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				vertex_count = 0
 		
 		prev_verts = curr_verts
 		has_prev = true
 		
 		if progress_callback.is_valid():
 			progress_callback.call(aperture_index)
+	
+	if vertex_count > 0:
+		_finalize_mesh_chunk(st, meshes)
+	
+	return _merge_meshes(meshes)
+
+
+func _finalize_mesh_chunk(st: SurfaceTool, meshes: Array[ArrayMesh]) -> void:
+	var mesh = st.commit()
+	if mesh.get_surface_count() > 0:
+		meshes.append(mesh)
+
+
+func _merge_meshes(meshes: Array[ArrayMesh]) -> ArrayMesh:
+	if meshes.is_empty():
+		return ArrayMesh.new()
+	
+	if meshes.size() == 1:
+		return meshes[0]
+	
+	var st := SurfaceTool.new()
+	
+	for mesh in meshes:
+		for i in range(mesh.get_surface_count()):
+			st.append_from(mesh, i, Transform3D())
 	
 	st.index()
 	st.generate_normals()

@@ -95,6 +95,16 @@ func get_apertures_count() -> int:
 
 func get_twiss_count() -> int:
 	return twiss_reader.get_line_count() if _is_web else 0
+	
+
+func clear_apertures() -> void:
+	if _is_web:
+		apertures_reader.close_file()
+
+
+func clear_twiss() -> void:
+	if _is_web:
+		twiss_reader.close_file()
 
 
 func clear_all() -> void:

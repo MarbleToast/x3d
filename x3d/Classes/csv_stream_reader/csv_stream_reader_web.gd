@@ -13,9 +13,9 @@ var _total_lines: int = 0
 var _batch_buffer: Dictionary = {}  # batch_start -> Array[String]
 var _batch_access_order: Array = []  # Track access order for LRU eviction
 var _last_batch_start: int = -1
-const BATCH_SIZE: int = 100
-const MAX_CACHED_BATCHES: int = 10  # Keep only 10 batches in memory
 
+const BATCH_SIZE: int = 75 # Each batch has 100 lines
+const MAX_CACHED_BATCHES: int = 2  # Keep only 10 batches in memory
 
 func _init() -> void:
 	if not OS.has_feature("web"):
@@ -44,15 +44,13 @@ func get_line(line_index: int) -> PackedStringArray:
 		return PackedStringArray()
 	
 	@warning_ignore("integer_division")
-	var batch_start: int = (line_index / BATCH_SIZE) * BATCH_SIZE
-	
-	# Load batch if not already cached
+	var batch_start: int = (line_index / BATCH_SIZE) * BATCH_SIZE # yes, looks weird
+
 	if not _batch_buffer.has(batch_start):
 		_load_batch(batch_start)
-	
-	# Return line from cached batch
-	if _batch_buffer.has(batch_start):
-		var batch = _batch_buffer[batch_start]
+
+	var batch = _batch_buffer.get(batch_start, null)
+	if batch:
 		var line_in_batch = line_index - batch_start
 		if line_in_batch >= 0 and line_in_batch < batch.size():
 			return PackedStringArray(batch[line_in_batch])
@@ -87,14 +85,15 @@ func _load_batch(batch_start: int) -> void:
 	
 	var data = _js_interface.getLineBatch(_current_file, batch_start, batch_size)
 	if data:
+		# Evict oldest batch if cache is full
+		while _batch_buffer.size() >= MAX_CACHED_BATCHES:
+			var oldest_batch = _batch_access_order.pop_front()
+			_batch_buffer.erase(oldest_batch)
+			
 		_batch_buffer[batch_start] = JSON.parse_string(data)
 		_batch_access_order.append(batch_start)
 		_last_batch_start = batch_start
-		
-		# Evict oldest batch if cache is full
-		if _batch_buffer.size() > MAX_CACHED_BATCHES:
-			var oldest_batch = _batch_access_order.pop_front()
-			_batch_buffer.erase(oldest_batch)
+
 
 
 func _on_file_selected(args: Array) -> void:

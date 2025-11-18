@@ -40,7 +40,7 @@ static func python_list_to_godot_array(arr_str: String) -> Array:
 	
 	for num_str in arr_str.split(","):
 		num_str = num_str.strip_edges()
-		if num_str == "None" or num_str == "":
+		if num_str == "None" or num_str == "" or num_str == "nan":
 			result.append(null)
 		else:
 			result.append(str_to_var(num_str))

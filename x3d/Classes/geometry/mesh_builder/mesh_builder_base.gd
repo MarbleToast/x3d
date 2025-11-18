@@ -54,7 +54,7 @@ func get_base_material(base_material: Material, colour: Color) -> Material:
 
 
 func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
-	var key := "%.2f_%.2f_%.2f" % [psi, theta, phi]
+	var key := "%.4f_%.4f_%.4f" % [psi, theta, phi]
 	if not _basis_cache.has(key):
 		_basis_cache[key] = Basis.from_euler(Vector3(psi, theta, phi), EULER_ORDER_XYZ)
 	return _basis_cache[key]

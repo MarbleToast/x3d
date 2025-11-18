@@ -3,8 +3,9 @@ extends MeshBuilderBase
 
 var web_loader: DataLoaderWeb
 
+const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
+
 ## Builds box meshes using streamed survey data from web loader
-## Yields every 10 elements to prevent frame blocking
 func build_box_meshes(
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
@@ -77,13 +78,15 @@ func build_box_meshes(
 	])
 
 
-## Builds sweep mesh using streamed data from web loader
+## Builds sweep mesh using streamed data in chunks (for OOM purposes)
 func build_sweep_mesh(
-	get_line_func: Callable,  # (index: int) -> PackedStringArray
+	mesh_type: String,
+	get_line_func: Callable,
 	line_count: int,
-	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	get_points_func: Callable,
 	progress_callback: Callable = Callable()
 ) -> ArrayMesh:
+	var meshes: Array[ArrayMesh] = []
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
@@ -91,6 +94,7 @@ func build_sweep_mesh(
 	var prev_verts: Array[Vector3] = []
 	var survey_count := web_loader.get_survey_count()
 	var column_map := DataLoader.parse_survey_header(web_loader.get_survey_line_raw(0))
+	var vertex_count := 0
 	
 	for i in range(line_count):
 		var data_line: PackedStringArray = get_line_func.call(i)
@@ -112,13 +116,56 @@ func build_sweep_mesh(
 			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
 		
 		if has_prev:
-			st.add_triangle_fan(_stitch_rings(prev_verts, curr_verts))
+			var fan := _stitch_rings(prev_verts, curr_verts)
+			st.add_triangle_fan(fan)
+			vertex_count += fan.size()
+			
+			# Commit mesh chunk if approaching vertex limit
+			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
+				_finalize_mesh_chunk(st, meshes)
+				st = SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				vertex_count = 0
 		
 		prev_verts = curr_verts
 		has_prev = true
 		
 		if progress_callback.is_valid():
 			progress_callback.call(i)
+	
+	
+	if vertex_count > 0:
+		_finalize_mesh_chunk(st, meshes)
+	
+	match mesh_type:
+		"apertures":
+			web_loader.clear_apertures()
+		"twiss":
+			web_loader.clear_twiss()
+	
+	return _merge_meshes(meshes)
+
+
+## Finalizes and stores a mesh chunk
+func _finalize_mesh_chunk(st: SurfaceTool, meshes: Array[ArrayMesh]) -> void:
+	var mesh := st.commit()
+	if mesh.get_surface_count() > 0:
+		meshes.append(mesh)
+
+
+## Merges multiple ArrayMesh objects into one
+func _merge_meshes(meshes: Array[ArrayMesh]) -> ArrayMesh:
+	if meshes.is_empty():
+		return ArrayMesh.new()
+	
+	if meshes.size() == 1:
+		return meshes[0]
+	
+	var st := SurfaceTool.new()
+	
+	for mesh in meshes:
+		for i in range(mesh.get_surface_count()):
+			st.append_from(mesh, i, Transform3D())
 	
 	st.index()
 	st.generate_normals()
@@ -131,6 +178,7 @@ func build_beam_mesh(
 	progress_callback: Callable = Callable()
 ) -> ArrayMesh:
 	return build_sweep_mesh(
+		"twiss",
 		web_loader.get_twiss_line,
 		web_loader.get_twiss_count(),
 		get_points_func,
@@ -143,6 +191,7 @@ func build_aperture_mesh(
 	progress_callback: Callable = Callable()
 ) -> ArrayMesh:
 	return build_sweep_mesh(
+		"apertures",
 		web_loader.get_apertures_line,
 		web_loader.get_apertures_count(),
 		get_points_func,
