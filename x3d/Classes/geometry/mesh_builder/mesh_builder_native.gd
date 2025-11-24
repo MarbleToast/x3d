@@ -71,17 +71,19 @@ func build_box_meshes(
 func build_sweep_mesh(
 	path: String,
 	get_points_func: Callable,
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
 	var line_data := DataLoader.load_csv(path)
 	
-	var meshes: Array[ArrayMesh] = []
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
 	var has_prev := false
 	var prev_verts: Array[Vector3] = []
 	var vertex_count := 0
+	var chunk_transform := Transform3D.IDENTITY
+	var is_first_in_chunk := true
 	
 	for aperture_index in range(len(line_data)):
 		var data_line := line_data[aperture_index]
@@ -94,6 +96,10 @@ func build_sweep_mesh(
 		var curr_center: Vector3 = curr_slice.position
 		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
 		
+		if is_first_in_chunk:
+			chunk_transform = Transform3D(curr_rotation, curr_center)
+			is_first_in_chunk = false
+		
 		var curr_verts: Array[Vector3] = []
 		for p in points_2d:
 			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
@@ -104,10 +110,11 @@ func build_sweep_mesh(
 			vertex_count += fan.size()
 			
 			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
-				_finalize_mesh_chunk(st, meshes)
+				_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 				st = SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)
 				vertex_count = 0
+				is_first_in_chunk = true
 		
 		prev_verts = curr_verts
 		has_prev = true
@@ -116,53 +123,30 @@ func build_sweep_mesh(
 			progress_callback.call(aperture_index)
 	
 	if vertex_count > 0:
-		_finalize_mesh_chunk(st, meshes)
-	
-	return _merge_meshes(meshes)
-
-
-func _finalize_mesh_chunk(st: SurfaceTool, meshes: Array[ArrayMesh]) -> void:
-	var mesh = st.commit()
-	if mesh.get_surface_count() > 0:
-		meshes.append(mesh)
-
-
-func _merge_meshes(meshes: Array[ArrayMesh]) -> ArrayMesh:
-	if meshes.is_empty():
-		return ArrayMesh.new()
-	
-	if meshes.size() == 1:
-		return meshes[0]
-	
-	var st := SurfaceTool.new()
-	
-	for mesh in meshes:
-		for i in range(mesh.get_surface_count()):
-			st.append_from(mesh, i, Transform3D())
-	
-	st.index()
-	st.generate_normals()
-	st.optimize_indices_for_cache()
-	return st.commit()
+		_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 
 
 func build_beam_mesh(
 	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
-	return build_sweep_mesh(
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
+	build_sweep_mesh(
 		twiss_path,
 		get_points_func,
-		progress_callback
+		progress_callback,
+		chunk_callback
 	)
 
 
 func build_aperture_mesh(
 	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
-	return build_sweep_mesh(
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
+	build_sweep_mesh(
 		aperture_path,
 		get_points_func,
-		progress_callback
+		progress_callback,
+		chunk_callback
 	)

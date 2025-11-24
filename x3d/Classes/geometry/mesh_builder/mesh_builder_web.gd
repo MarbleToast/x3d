@@ -84,9 +84,9 @@ func build_sweep_mesh(
 	get_line_func: Callable,
 	line_count: int,
 	get_points_func: Callable,
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
-	var meshes: Array[ArrayMesh] = []
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
@@ -95,6 +95,8 @@ func build_sweep_mesh(
 	var survey_count := web_loader.get_survey_count()
 	var column_map := DataLoader.parse_survey_header(web_loader.get_survey_line_raw(0))
 	var vertex_count := 0
+	var chunk_transform := Transform3D.IDENTITY
+	var is_first_in_chunk := true
 	
 	for i in range(line_count):
 		var data_line: PackedStringArray = get_line_func.call(i)
@@ -111,6 +113,10 @@ func build_sweep_mesh(
 		var curr_center: Vector3 = curr_slice.position
 		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
 		
+		if is_first_in_chunk:
+			chunk_transform = Transform3D(curr_rotation, curr_center)
+			is_first_in_chunk = false
+		
 		var curr_verts: Array[Vector3] = []
 		for p in points_2d:
 			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
@@ -122,10 +128,11 @@ func build_sweep_mesh(
 			
 			# Commit mesh chunk if approaching vertex limit
 			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
-				_finalize_mesh_chunk(st, meshes)
+				_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 				st = SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)
 				vertex_count = 0
+				is_first_in_chunk = true
 		
 		prev_verts = curr_verts
 		has_prev = true
@@ -135,65 +142,40 @@ func build_sweep_mesh(
 	
 	
 	if vertex_count > 0:
-		_finalize_mesh_chunk(st, meshes)
+		_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 	
 	match mesh_type:
 		"apertures":
 			web_loader.clear_apertures()
 		"twiss":
 			web_loader.clear_twiss()
-	
-	return _merge_meshes(meshes)
-
-
-## Finalizes and stores a mesh chunk
-func _finalize_mesh_chunk(st: SurfaceTool, meshes: Array[ArrayMesh]) -> void:
-	var mesh := st.commit()
-	if mesh.get_surface_count() > 0:
-		meshes.append(mesh)
-
-
-## Merges multiple ArrayMesh objects into one
-func _merge_meshes(meshes: Array[ArrayMesh]) -> ArrayMesh:
-	if meshes.is_empty():
-		return ArrayMesh.new()
-	
-	if meshes.size() == 1:
-		return meshes[0]
-	
-	var st := SurfaceTool.new()
-	
-	for mesh in meshes:
-		for i in range(mesh.get_surface_count()):
-			st.append_from(mesh, i, Transform3D())
-	
-	st.index()
-	st.generate_normals()
-	st.optimize_indices_for_cache()
-	return st.commit()
 
 
 func build_beam_mesh(
 	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
-	return build_sweep_mesh(
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
+	build_sweep_mesh(
 		"twiss",
 		web_loader.get_twiss_line,
 		web_loader.get_twiss_count(),
 		get_points_func,
-		progress_callback
+		progress_callback,
+		chunk_callback
 	)
 	
 	
 func build_aperture_mesh(
 	get_points_func: Callable,
-	progress_callback: Callable = Callable()
-) -> ArrayMesh:
-	return build_sweep_mesh(
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void:
+	build_sweep_mesh(
 		"apertures",
 		web_loader.get_apertures_line,
 		web_loader.get_apertures_count(),
 		get_points_func,
-		progress_callback
+		progress_callback,
+		chunk_callback
 	)

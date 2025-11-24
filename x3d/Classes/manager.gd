@@ -43,8 +43,8 @@ var aperture_thread: Thread
 var beam_thread: Thread
 var magnets_thread: Thread
 
-var beam_mesh_instance: MeshInstance3D
-var aperture_mesh_instance: MeshInstance3D
+var beam_mesh_instances: Array[MeshInstance3D] = []
+var aperture_mesh_instances: Array[MeshInstance3D] = []
 var length_mesh_instances: Array[StaticBody3D] = []
 
 # File paths (native)
@@ -82,12 +82,14 @@ func _ready() -> void:
 	
 	toggle_beam.set_pressed_no_signal(true)
 	toggle_beam.toggled.connect(func(val):
-		if beam_mesh_instance: beam_mesh_instance.visible = val
+		for m in aperture_mesh_instances:
+			m.visible = val
 	)
 	
 	toggle_apertures.set_pressed_no_signal(true)
 	toggle_apertures.toggled.connect(func(val):
-		if aperture_mesh_instance: aperture_mesh_instance.visible = val
+		for m in beam_mesh_instances:
+			m.visible = val
 	)
 
 	_connect_signals()
@@ -190,22 +192,24 @@ func _connect_signals() -> void:
 func _start_aperture_thread() -> void:
 	aperture_thread = Thread.new()
 	aperture_thread.start(func():
-		var mesh := mesh_builder.build_aperture_mesh(
+		mesh_builder.build_aperture_mesh(
 			func(line): return DataLoader.parse_edge_line(line, APERTURE_THICKNESS_MODIFIER),
-			func(p): aperture_progress.set_value.call_deferred(p)
+			func(p): aperture_progress.set_value.call_deferred(p),
+			_add_aperture_mesh_chunk
 		)
-		aperture_mesh_complete.emit.call_deferred(mesh)
+		aperture_mesh_complete.emit.call_deferred()
 	)
 
 
 func _start_beam_thread() -> void:
 	beam_thread = Thread.new()
 	beam_thread.start(func():
-		var mesh := mesh_builder.build_beam_mesh(
+		mesh_builder.build_beam_mesh(
 			func(line): return mesh_builder.create_beam_ellipse(line, BEAM_THICKNESS_MODIFIER),
-			func(p): beam_progress.set_value.call_deferred(p)
+			func(p): beam_progress.set_value.call_deferred(p),
+			_add_twiss_mesh_chunk
 		)
-		beam_mesh_complete.emit.call_deferred(mesh)
+		beam_mesh_complete.emit.call_deferred()
 	)
 
 
@@ -223,34 +227,39 @@ func _start_magnets_thread() -> void:
 
 # ==================== Mesh completion handlers ====================
 
-func _on_aperture_mesh_complete(mesh: ArrayMesh) -> void:
-	if mesh.get_surface_count() > 0:
-		print("Aperture mesh generated.")
-		aperture_mesh_instance = MeshInstance3D.new()
-		aperture_mesh_instance.name = "ApertureModel"
-		mesh.surface_set_material(0, aperture_material)
-		aperture_mesh_instance.mesh = mesh
-		add_child(aperture_mesh_instance)
-		aperture_progress.value = aperture_progress.max_value
+func _add_box_static_body(static_body: StaticBody3D) -> void:
+	length_mesh_instances.append(static_body)
+	static_body.input_event.connect(_on_aperture_mesh_clicked.bind(static_body.get_node("box")))
+	add_child(static_body)
+
+
+func _add_aperture_mesh_chunk(mesh_instance: MeshInstance3D) -> void:
+	mesh_instance.mesh.surface_set_material(0, aperture_material)
+	mesh_instance.name = "ApertureChunk%s" % len(aperture_mesh_instances)
+	aperture_mesh_instances.append(mesh_instance)
+	add_child.call_deferred(mesh_instance)
+
+
+func _add_twiss_mesh_chunk(mesh_instance: MeshInstance3D) -> void:
+	mesh_instance.mesh.surface_set_material(0, beam_material)
+	mesh_instance.name = "TwissChunk"
+	beam_mesh_instances.append(mesh_instance)
+	add_child.call_deferred(mesh_instance)
+
+
+func _on_aperture_mesh_complete() -> void:
+	aperture_progress.value = aperture_progress.max_value
 	aperture_thread.wait_to_finish()
 	_progress_success_animation(aperture_progress_container)
 
 
-func _on_beam_mesh_complete(mesh: ArrayMesh) -> void:
-	if mesh.get_surface_count() > 0:
-		print("Beam mesh generated.")
-		beam_mesh_instance = MeshInstance3D.new()
-		beam_mesh_instance.name = "Twiss"
-		beam_mesh_instance.mesh = mesh
-		beam_mesh_instance.set_surface_override_material(0, preload("res://Assets/beam_envelope.tres").duplicate())
-		add_child(beam_mesh_instance)
-		beam_progress.value = beam_progress.max_value
-		
+func _on_beam_mesh_complete() -> void:
+	beam_progress.value = beam_progress.max_value
 	beam_thread.wait_to_finish()
 	_progress_success_animation(beam_progress_container)
 	
-	beam_animator.beam_mesh_instance = beam_mesh_instance
-	beam_animator.start_animation()
+	#beam_animator.beam_mesh_instance = beam_mesh_instance
+	#beam_animator.start_animation()
 
 
 func _on_element_meshes_complete() -> void:
@@ -269,12 +278,6 @@ func _setup_export_callbacks() -> void:
 	)
 
 
-func _add_box_static_body(static_body: StaticBody3D) -> void:
-	length_mesh_instances.append(static_body)
-	static_body.input_event.connect(_on_aperture_mesh_clicked.bind(static_body.get_node("box")))
-	add_child(static_body)
-
-
 func _on_aperture_mesh_clicked(_cam, event, _pos, _norm, _shape, caller: ElementMeshInstance) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		selected_element_mesh = caller
@@ -287,22 +290,22 @@ func _progress_success_animation(container: Container) -> void:
 	container.modulate = Color.WHITE
 
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.keycode == KEY_M and event.pressed and not event.echo:
-		_export_mesh()
+#func _input(event: InputEvent) -> void:
+	#if event is InputEventKey and event.keycode == KEY_M and event.pressed and not event.echo:
+		#_export_mesh()
 
 
-func _export_mesh() -> void:
-	if not mesh_export_thread:
-		mesh_export_thread = Thread.new()
-	if mesh_export_thread.is_started():
-		return
-	mesh_export_thread.start(func():
-		if beam_mesh_instance:
-			OBJExporter.save_mesh_to_files(beam_mesh_instance.mesh, "user://", "mesh_export_beam")
-		if aperture_mesh_instance:
-			OBJExporter.save_mesh_to_files(aperture_mesh_instance.mesh, "user://", "mesh_export_aperture")
-	)
+#func _export_mesh() -> void:
+	#if not mesh_export_thread:
+		#mesh_export_thread = Thread.new()
+	#if mesh_export_thread.is_started():
+		#return
+	#mesh_export_thread.start(func():
+		#if beam_mesh_instance:
+			#OBJExporter.save_mesh_to_files(beam_mesh_instance.mesh, "user://", "mesh_export_beam")
+		#if aperture_mesh_instance:
+			#OBJExporter.save_mesh_to_files(aperture_mesh_instance.mesh, "user://", "mesh_export_aperture")
+	#)
 
 
 func _exit_tree() -> void:

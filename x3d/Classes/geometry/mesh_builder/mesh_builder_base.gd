@@ -223,6 +223,34 @@ func _add_multipole_kick(
 		static_body_callback.call(kick_body)
 
 
+func _finalize_mesh_chunk(
+	st: SurfaceTool, 
+	chunk_transform: Transform3D,
+	chunk_callback: Callable
+) -> void:
+	var mesh := st.commit()
+	if mesh.get_surface_count() == 0:
+		return
+	
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var inverse_transform := chunk_transform.affine_inverse()
+	
+	for i in range(vertices.size()):
+		vertices[i] = inverse_transform * vertices[i]
+	
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	mesh.clear_surfaces()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.mesh = mesh
+	mesh_instance.transform = chunk_transform
+	
+	if chunk_callback.is_valid():
+		chunk_callback.call(mesh_instance)
+
+
 @abstract func build_box_meshes(
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
@@ -232,10 +260,12 @@ func _add_multipole_kick(
 
 @abstract func build_beam_mesh(
 	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void
 
 @abstract func build_aperture_mesh(
 	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void
