@@ -3,7 +3,7 @@ extends MeshBuilderBase
 
 var web_loader: DataLoaderWeb
 
-const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
+const SWEEP_CHUNK_VERTEX_LIMIT: int = 32000 # Max vertices per chunk of sweep mesh
 
 ## Builds box meshes using streamed survey data from web loader
 func build_box_meshes(
@@ -106,7 +106,7 @@ func build_sweep_mesh(
 		if curr_slice.is_empty():
 			continue
 		
-		var points_2d: Array[Vector2] = get_points_func.call(data_line)
+		var points_2d: Dictionary = get_points_func.call(data_line)
 		if points_2d.is_empty():
 			continue
 		
@@ -118,11 +118,11 @@ func build_sweep_mesh(
 			is_first_in_chunk = false
 		
 		var curr_verts: Array[Vector3] = []
-		for p in points_2d:
+		for p in points_2d.points:
 			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
 		
 		if has_prev:
-			var fan := _stitch_rings(prev_verts, curr_verts)
+			var fan := _stitch_rings(prev_verts, curr_verts, chunk_transform.affine_inverse())
 			st.add_triangle_fan(fan)
 			vertex_count += fan.size()
 			

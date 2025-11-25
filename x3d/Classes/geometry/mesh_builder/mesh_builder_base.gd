@@ -170,20 +170,21 @@ func _calculate_element_position(slice: Dictionary, start_rotation: Basis, end_r
 		return slice.position + (mid_to_center - to_center)
 
 
-func _stitch_rings(prev_verts: Array[Vector3], curr_verts: Array[Vector3]) -> PackedVector3Array:
+func _stitch_rings(prev_verts: Array[Vector3], curr_verts: Array[Vector3], affine_inverse: Transform3D) -> PackedVector3Array:
 	var num_verts := curr_verts.size()
 	var verts := PackedVector3Array()
 	verts.resize(num_verts * 6)
 	var k := 0
 	for j in num_verts:
 		var jn := (j + 1) % num_verts
-		verts[k] = prev_verts[j]
-		verts[k+1] = prev_verts[jn]
-		verts[k+2] = curr_verts[j]
-		verts[k+3] = prev_verts[jn]
-		verts[k+4] = curr_verts[jn]
-		verts[k+5] = curr_verts[j]
+		verts[k] = affine_inverse * prev_verts[j]
+		verts[k+1] = affine_inverse * prev_verts[jn]
+		verts[k+2] = affine_inverse * curr_verts[j]
+		verts[k+3] = affine_inverse * prev_verts[jn]
+		verts[k+4] = affine_inverse * curr_verts[jn]
+		verts[k+5] = affine_inverse * curr_verts[j]
 		k += 6
+	
 	return verts
 
 
@@ -232,17 +233,6 @@ func _finalize_mesh_chunk(
 	if mesh.get_surface_count() == 0:
 		return
 	
-	var arrays := mesh.surface_get_arrays(0)
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var inverse_transform := chunk_transform.affine_inverse()
-	
-	for i in range(vertices.size()):
-		vertices[i] = inverse_transform * vertices[i]
-	
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	mesh.clear_surfaces()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.mesh = mesh
 	mesh_instance.transform = chunk_transform
@@ -259,13 +249,13 @@ func _finalize_mesh_chunk(
 ) -> void
 
 @abstract func build_beam_mesh(
-	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	get_points_func: Callable,  # (line: PackedStringArray) -> Dictionary
 	progress_callback: Callable = Callable(),
 	chunk_callback: Callable = Callable()
 ) -> void
 
 @abstract func build_aperture_mesh(
-	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
+	get_points_func: Callable,  # (line: PackedStringArray) -> Dictionary
 	progress_callback: Callable = Callable(),
 	chunk_callback: Callable = Callable()
 ) -> void

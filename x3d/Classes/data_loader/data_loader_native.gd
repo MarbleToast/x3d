@@ -13,7 +13,7 @@ const BEAM_SIGMA_DELTA := 8e-4
 ## Parses the survey CSV header and returns a dictionary mapping column names to indices
 static func parse_survey_header(header: PackedStringArray) -> Dictionary:
 	var column_map := {}
-	var required_columns := ["x", "y", "z", "theta", "phi", "psi", "element_type", "length", "name"]
+	var required_columns := ["x", "y", "z", "theta", "phi", "psi", "element_type", "length", "name", "s"]
 	
 	for i in range(header.size()):
 		var col_name := header[i].strip_edges().to_lower()
@@ -63,6 +63,7 @@ static func parse_survey_line(line: PackedStringArray, column_map: Dictionary) -
 		psi = float(line[column_map["psi"]]),
 		element_type = line[column_map["element_type"]],
 		length = float(line[column_map["length"]]),
+		s = float(line[column_map["s"]]),
 		name = line[column_map["name"]],
 		line = JSON.stringify(line)
 	}
@@ -82,8 +83,11 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 	var dx := float(line[23])
 	var dy := float(line[25])
 	
+	var s := float(line[2])
+	
 	return {
 		position = Vector2(x, y),
+		s = s,
 		sigma = BEAM_SIGMA_DELTA * BEAM_NUM_SIGMAS * Vector2(
 			sqrt(BEAM_EMITTANCE_X * beta_x) + absf(dx),
 			sqrt(BEAM_EMITTANCE_Y * beta_y) + absf(dy)
@@ -92,16 +96,17 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 
 
 ## Parses a line of aperture vertex data from an Xsuite apertures CSV
-static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float = 1.0) -> Array[Vector2]:
+## Returns {points: Array[Vector2], s: float}
+static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float = 1.0) -> Dictionary:
 	var points: Array[Vector2] = []
 	if len(line) < 5:
-		return points
+		return {}
 		
 	var xs: Array = python_list_to_godot_array(line[3])
 	var ys: Array = python_list_to_godot_array(line[4])
 	
 	if len(xs) == 0 or len(ys) == 0 or xs[0] == null or ys[0] == null:
-		return points
+		return {}
 	
 	var n: int = min(len(xs), len(ys))
 	points.resize(n)
@@ -110,7 +115,11 @@ static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float
 			points[i] = Vector2(xs[i], ys[i]) * thickness_multiplier
 		else:
 			points[i] = Vector2.ZERO
-	return points
+
+	return {
+		points = points,
+		s = float(line[3])
+	}
 
 
 ## Reads and parses all lines from an Xsuite survey file, discarding non-usable lines

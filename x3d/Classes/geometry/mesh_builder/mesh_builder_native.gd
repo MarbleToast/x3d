@@ -7,6 +7,17 @@ var twiss_path: String
 
 const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
 
+var curve := Curve3D.new()
+
+func create_curve() -> void:
+	for slice in survey_data:
+		curve.add_point(slice.position)
+
+
+func sample_curve(s: float) -> Vector3:
+	return curve.sample_baked(s)
+
+
 func build_box_meshes(
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
@@ -89,11 +100,11 @@ func build_sweep_mesh(
 		var data_line := line_data[aperture_index]
 		var curr_slice := survey_data[aperture_index % len(survey_data)]
 		
-		var points_2d: Array[Vector2] = get_points_func.call(data_line)
+		var points_2d: Dictionary = get_points_func.call(data_line) # {points: Array[Vector2], s: float}
 		if points_2d.is_empty():
 			continue
 		
-		var curr_center: Vector3 = curr_slice.position
+		var curr_center: Vector3 = sample_curve(points_2d.s)
 		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
 		
 		if is_first_in_chunk:
@@ -101,11 +112,12 @@ func build_sweep_mesh(
 			is_first_in_chunk = false
 		
 		var curr_verts: Array[Vector3] = []
-		for p in points_2d:
-			curr_verts.append(curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y)
+		for p: Vector2 in points_2d.points:
+			var world_pos := curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y
+			curr_verts.append(world_pos)
 		
 		if has_prev:
-			var fan = _stitch_rings(prev_verts, curr_verts)
+			var fan = _stitch_rings(prev_verts, curr_verts, chunk_transform.affine_inverse())
 			st.add_triangle_fan(fan)
 			vertex_count += fan.size()
 			
