@@ -1,21 +1,54 @@
 class_name MeshBuilderNative
 extends MeshBuilderBase
 
-var survey_data: Array[Dictionary]
+const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
+
+var survey_data: Array[Dictionary]:
+	set(value):
+		survey_data = value
+		true_curve_length = value[-1].s + value[-1].length
+
 var aperture_path: String
 var twiss_path: String
 
-const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
-
-var curve := Curve3D.new()
-
-func create_curve() -> void:
-	for slice in survey_data:
-		curve.add_point(slice.position)
+var true_curve_length: float
+var _last_survey_index := 0
 
 
-func sample_curve(s: float) -> Vector3:
-	return curve.sample_baked(s)
+func get_transform_at_s(global_s: float) -> Transform3D:
+	if survey_data.is_empty():
+		return Transform3D.IDENTITY
+	
+	var s := fposmod(global_s, true_curve_length)
+	
+	var i := _last_survey_index
+	while i < survey_data.size() - 1 and s >= survey_data[i + 1].s:
+		i += 1
+	
+	while i > 0 and s < survey_data[i].s:
+		i -= 1
+	
+	_last_survey_index = i
+	
+	var slice := survey_data[i]
+	var local_s: float = s - slice.s
+	if local_s < 0:
+		local_s += true_curve_length
+	
+	var frac: float = clampf(local_s / slice.length, 0.0, 1.0)
+	
+	var start_basis := get_cached_basis(slice.psi, slice.theta, slice.phi)
+	var start_pos: Vector3 = slice.position
+	
+	var next_i := (i + 1) % survey_data.size()
+	var next_slice := survey_data[next_i]
+	var end_basis := get_cached_basis(next_slice.psi, next_slice.theta, next_slice.phi)
+	var end_pos: Vector3 = next_slice.position
+	
+	var start_trans := Transform3D(start_basis, start_pos)
+	var end_trans := Transform3D(end_basis, end_pos)
+	
+	return start_trans.interpolate_with(end_trans, frac)
 
 
 func build_box_meshes(
@@ -98,27 +131,26 @@ func build_sweep_mesh(
 	
 	for aperture_index in range(len(line_data)):
 		var data_line := line_data[aperture_index]
-		var curr_slice := survey_data[aperture_index % len(survey_data)]
 		
 		var points_2d: Dictionary = get_points_func.call(data_line) # {points: Array[Vector2], s: float}
 		if points_2d.is_empty():
 			continue
 		
-		var curr_center: Vector3 = sample_curve(points_2d.s)
-		var curr_rotation := get_cached_basis(curr_slice.psi, curr_slice.theta, curr_slice.phi)
+		var curr_trans: Transform3D = get_transform_at_s(points_2d.s)
 		
 		if is_first_in_chunk:
-			chunk_transform = Transform3D(curr_rotation, curr_center)
+			chunk_transform = curr_trans
 			is_first_in_chunk = false
 		
 		var curr_verts: Array[Vector3] = []
 		for p: Vector2 in points_2d.points:
-			var world_pos := curr_center + curr_rotation.x * p.x + curr_rotation.y * p.y
+			var world_pos := curr_trans.origin + curr_trans.basis.x * p.x + curr_trans.basis.y * p.y
 			curr_verts.append(world_pos)
 		
 		if has_prev:
-			var fan = _stitch_rings(prev_verts, curr_verts, chunk_transform.affine_inverse())
-			st.add_triangle_fan(fan)
+			var fan := _stitch_rings(prev_verts, curr_verts, chunk_transform.affine_inverse())
+			for v in fan:
+				st.add_vertex(v)
 			vertex_count += fan.size()
 			
 			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
@@ -133,7 +165,7 @@ func build_sweep_mesh(
 		
 		if progress_callback.is_valid():
 			progress_callback.call(aperture_index)
-	
+
 	if vertex_count > 0:
 		_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 

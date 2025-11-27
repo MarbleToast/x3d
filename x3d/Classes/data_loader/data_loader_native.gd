@@ -118,7 +118,7 @@ static func parse_edge_line(line: PackedStringArray, thickness_multiplier: float
 
 	return {
 		points = points,
-		s = float(line[3])
+		s = float(line[2])
 	}
 
 

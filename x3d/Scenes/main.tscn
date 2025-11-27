@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=16 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://Classes/manager.gd" id="1_jjgbg"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Classes/camera_3d.gd" id="2_bo1nx"]
@@ -47,6 +47,8 @@ shading_mode = 0
 albedo_color = Color(1, 0, 1, 1)
 stencil_flags = 2
 stencil_color = Color(0.50966626, 0.21255118, 0.6443313, 1)
+
+[sub_resource type="Curve3D" id="Curve3D_344ge"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_8gbba"]
 font_size = 20
@@ -97,6 +99,9 @@ status_label = NodePath("../ImportMenu/MarginContainer/VBoxContainer/ErrorText")
 [node name="Timer" type="Timer" parent="MeshManager"]
 wait_time = 0.1
 one_shot = true
+
+[node name="Path3D" type="Path3D" parent="MeshManager"]
+curve = SubResource("Curve3D_344ge")
 
 [node name="BeamAnimator" type="Node3D" parent="."]
 script = ExtResource("3_21xkr")

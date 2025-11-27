@@ -229,6 +229,10 @@ func _finalize_mesh_chunk(
 	chunk_transform: Transform3D,
 	chunk_callback: Callable
 ) -> void:
+	# st.index()
+	# st.generate_normals()
+	# st.optimize_indices_for_cache()
+	
 	var mesh := st.commit()
 	if mesh.get_surface_count() == 0:
 		return

@@ -72,6 +72,7 @@ var selected_element_mesh: ElementMeshInstance:
 		]
 		selected_element_mesh = value
 
+
 func _ready() -> void:
 	toggle_elements.set_pressed_no_signal(true)
 	toggle_elements.toggled.connect(func(val):
@@ -108,7 +109,7 @@ func setup() -> void:
 		mesh_builder.web_loader = %FileDialog.web_loader
 	else:
 		mesh_builder = MeshBuilderNative.new()
-		mesh_builder.survey_data = DataLoader.load_survey(survey_path)
+		mesh_builder.survey_data = time_it(DataLoader.load_survey, survey_path)
 		mesh_builder.aperture_path = apertures_path
 		mesh_builder.twiss_path = twiss_path
 
@@ -268,6 +269,13 @@ func _on_element_meshes_complete() -> void:
 
 
 # ==================== Misc ====================
+
+func time_it(fn: Callable, ...varargs: Array) -> Variant:
+	var t := Time.get_ticks_msec()
+	var res = fn.callv(varargs)
+	print("%s returned in %s ms." % [fn.get_method(), Time.get_ticks_msec() - t])
+	return res
+
 
 func _setup_export_callbacks() -> void:
 	OBJExporter.export_progress_updated.connect(func(sid, prog):
