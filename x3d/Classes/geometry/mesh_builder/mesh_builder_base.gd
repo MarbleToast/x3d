@@ -61,31 +61,29 @@ func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
 
 
 # ===================== Mesh Geometry Utilities
-func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Array[Vector2]:
+func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Dictionary:
 	var twiss := DataLoader.parse_twiss_line(twiss_line)
 	if not twiss:
-		return []
-		
-	var res: Array[Vector2]
+		return {}
 	
 	var key := "%s_%s" % [twiss.position, twiss.sigma]
-	if _ring_cache.has(key):
-		res.assign(_ring_cache[key])
-		return res
-
-	var pts: Array[Vector2] = []
-	var center: Vector2 = twiss.position
-	var sigma: Vector2 = twiss.sigma
-	var step := TAU / float(BEAM_ELLIPSE_RESOLUTION)
 	
-	for i in BEAM_ELLIPSE_RESOLUTION:
-		var angle := i * step
-		pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
-	
-	_ring_cache[key] = pts.map(func(v): return v * thickness_modifier)
+	if not _ring_cache.has(key):
+		var pts: Array[Vector2] = []
+		var center: Vector2 = twiss.position
+		var sigma: Vector2 = twiss.sigma
+		var step := TAU / float(BEAM_ELLIPSE_RESOLUTION)
+		
+		for i in BEAM_ELLIPSE_RESOLUTION:
+			var angle := i * step
+			pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
+			
+		_ring_cache[key] = pts.map(func(v): return v * thickness_modifier)
 
-	res.assign(_ring_cache[key])
-	return res
+	return {
+		points = _ring_cache[key],
+		s = twiss.s
+	}
 
 
 func calculate_curvature(

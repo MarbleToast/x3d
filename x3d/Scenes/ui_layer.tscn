@@ -1,0 +1,382 @@
+[gd_scene load_steps=10 format=3 uid="uid://qvf5dco2fl7e"]
+
+[ext_resource type="Texture2D" uid="uid://dvwshjc7ohr1a" path="res://Assets/401926-200.png" id="1_gom75"]
+[ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="1_sw0fj"]
+[ext_resource type="Script" uid="uid://bhdki27n26nsy" path="res://Classes/gui/edit_element_button.gd" id="2_gom75"]
+[ext_resource type="Script" uid="uid://bk0ypoxp0lbdv" path="res://Scenes/edit_element_menu_button.gd" id="3_fp1jp"]
+[ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://Classes/gui/import_file_dialog.gd" id="4_4efk5"]
+[ext_resource type="Script" uid="uid://d4d7s226i8aau" path="res://Scenes/help_panel.gd" id="4_fp1jp"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fp1jp"]
+content_margin_left = 15.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+bg_color = Color(0.13725491, 0.13725491, 0.13333334, 0.78431374)
+border_width_left = 2
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_8gbba"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gom75"]
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+bg_color = Color(0.13725491, 0.13725491, 0.13333334, 0.78431374)
+border_width_left = 2
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
+[node name="LoadedLayer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.16800001
+anchor_bottom = 0.029000001
+offset_right = 0.43997192
+offset_bottom = -0.3200016
+theme_override_constants/separation = 2
+
+[node name="MenuBar" type="MenuBar" parent="HBoxContainer"]
+layout_mode = 2
+theme_override_constants/outline_size = 2
+theme_override_constants/h_separation = 2
+switch_on_hover = false
+
+[node name="PopupMenuFile" type="PopupMenu" parent="HBoxContainer/MenuBar"]
+title = "File"
+item_count = 1
+item_0/text = "Load New..."
+item_0/id = 0
+
+[node name="PopupMenuView" type="PopupMenu" parent="HBoxContainer/MenuBar"]
+title = "View"
+hide_on_item_selection = false
+item_count = 3
+item_0/text = "View Elements"
+item_0/checkable = 1
+item_0/checked = true
+item_0/id = 0
+item_1/text = "View Aperture"
+item_1/checkable = 1
+item_1/checked = true
+item_1/id = 1
+item_2/text = "View Twiss"
+item_2/checkable = 1
+item_2/checked = true
+item_2/id = 2
+
+[node name="PopupMenuHelp" type="PopupMenu" parent="HBoxContainer/MenuBar"]
+title = "Help"
+item_count = 1
+item_0/text = "About x3d..."
+item_0/id = 2
+
+[node name="CameraTypeToggle" type="Button" parent="HBoxContainer"]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Change to Orthographic View"
+toggle_mode = true
+icon = ExtResource("1_gom75")
+expand_icon = true
+
+[node name="ProgressContainers" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -0.001
+anchor_top = 0.757
+anchor_right = 0.15100001
+anchor_bottom = 1.0
+offset_left = 0.9200001
+offset_top = 0.4399414
+offset_right = -29.920013
+offset_bottom = 0.00048828125
+theme_override_constants/separation = 3
+
+[node name="PanelContainer" type="MarginContainer" parent="ProgressContainers"]
+visible = false
+layout_mode = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="ProgressContainers/PanelContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fp1jp")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ProgressContainers/PanelContainer/PanelContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProgressContainers/PanelContainer/PanelContainer/HBoxContainer"]
+layout_mode = 2
+text = "Generating aperture mesh..."
+label_settings = SubResource("LabelSettings_8gbba")
+
+[node name="ApertureProgress" type="TextureProgressBar" parent="ProgressContainers/PanelContainer/PanelContainer/HBoxContainer"]
+layout_mode = 2
+fill_mode = 4
+nine_patch_stretch = true
+stretch_margin_left = 50
+stretch_margin_top = 50
+texture_progress = ExtResource("1_sw0fj")
+
+[node name="PanelContainer2" type="MarginContainer" parent="ProgressContainers"]
+visible = false
+layout_mode = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="ProgressContainers/PanelContainer2"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fp1jp")
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ProgressContainers/PanelContainer2/PanelContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProgressContainers/PanelContainer2/PanelContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Generating beam mesh..."
+label_settings = SubResource("LabelSettings_8gbba")
+
+[node name="BeamProgress" type="TextureProgressBar" parent="ProgressContainers/PanelContainer2/PanelContainer/HBoxContainer2"]
+layout_mode = 2
+fill_mode = 4
+nine_patch_stretch = true
+stretch_margin_left = 50
+stretch_margin_top = 50
+texture_progress = ExtResource("1_sw0fj")
+
+[node name="PanelContainer3" type="MarginContainer" parent="ProgressContainers"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="PanelContainer" type="PanelContainer" parent="ProgressContainers/PanelContainer3"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_fp1jp")
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="ProgressContainers/PanelContainer3/PanelContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ProgressContainers/PanelContainer3/PanelContainer/HBoxContainer3"]
+layout_mode = 2
+text = "Generating element meshes.."
+
+[node name="ElementProgress" type="TextureProgressBar" parent="ProgressContainers/PanelContainer3/PanelContainer/HBoxContainer3"]
+layout_mode = 2
+fill_mode = 4
+nine_patch_stretch = true
+stretch_margin_left = 50
+stretch_margin_top = 50
+texture_progress = ExtResource("1_sw0fj")
+
+[node name="ApertureInfoContainer" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.81500006
+anchor_top = 0.014
+anchor_right = 0.998
+anchor_bottom = 0.21900001
+offset_left = 0.19995117
+offset_top = -0.12000084
+offset_right = 0.8399658
+offset_bottom = 0.47998047
+
+[node name="PanelContainer" type="PanelContainer" parent="ApertureInfoContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_fp1jp")
+
+[node name="ApertureInfo" type="RichTextLabel" parent="ApertureInfoContainer/PanelContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+metadata/_edit_use_anchors_ = true
+
+[node name="EditElementButton" type="Button" parent="ApertureInfoContainer" node_paths=PackedStringArray("edit_element_menu")]
+visible = false
+layout_mode = 2
+toggle_mode = true
+text = "Edit Element"
+script = ExtResource("2_gom75")
+edit_element_menu = NodePath("../../EditElementMenu")
+
+[node name="PanelContainer" type="PopupPanel" parent="."]
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(600, 200)
+theme_override_styles/panel = SubResource("StyleBoxFlat_gom75")
+script = ExtResource("4_fp1jp")
+
+[node name="Info" type="RichTextLabel" parent="PanelContainer"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 595.0
+offset_bottom = 197.0
+grow_horizontal = 0
+grow_vertical = 0
+bbcode_enabled = true
+text = "x3d, a 3D visualiser for accelerator lattice models, by James Bradford
+[hr]
+WASD to move
+SPACE to ascend, SHIFT to descend
+Left Click to view element data, Right Click to toggle freelook
+In perspective mode, scroll to change camera speed
+In orthographic mode, scroll to change object size"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EditElementMenu" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.5
+offset_top = -118.0
+offset_right = 270.5
+offset_bottom = 118.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="EditElementMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+
+[node name="VBoxContainer" type="VBoxContainer" parent="EditElementMenu/MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="RichTextLabel" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+bbcode_enabled = true
+text = "Position"
+fit_content = true
+scroll_active = false
+
+[node name="Label2" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "X"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditX" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label3" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Y"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditY" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label4" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Z"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditZ" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Rotation"
+
+[node name="Label2" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ψ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditPsi" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label3" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "θ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditTheta" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label4" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ɸ"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEditPhi" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Length"
+
+[node name="LineEditLength" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RebuildMesh" type="Button" parent="EditElementMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("x", "y", "z", "psi", "theta", "phi", "length")]
+layout_mode = 2
+toggle_mode = true
+text = "Rebuild Mesh"
+script = ExtResource("3_fp1jp")
+x = NodePath("../HBoxContainer2/LineEditX")
+y = NodePath("../HBoxContainer2/LineEditY")
+z = NodePath("../HBoxContainer2/LineEditZ")
+psi = NodePath("../HBoxContainer/LineEditPsi")
+theta = NodePath("../HBoxContainer/LineEditTheta")
+phi = NodePath("../HBoxContainer/LineEditPhi")
+length = NodePath("../HBoxContainer3/LineEditLength")
+
+[node name="FileDialog" type="FileDialog" parent="EditElementMenu"]
+oversampling_override = 1.0
+title = "Open a File"
+initial_position = 1
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.csv,*.tfs")
+use_native_dialog = true
+script = ExtResource("4_4efk5")
+
+[connection signal="index_pressed" from="HBoxContainer/MenuBar/PopupMenuHelp" to="PanelContainer" method="_on_popup_menu_help_index_pressed"]
+[connection signal="toggled" from="ApertureInfoContainer/EditElementButton" to="ApertureInfoContainer/EditElementButton" method="_on_toggled"]
+[connection signal="pressed" from="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_pressed"]
+[connection signal="visibility_changed" from="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_visibility_changed"]
+[connection signal="file_selected" from="EditElementMenu/FileDialog" to="EditElementMenu/FileDialog" method="_on_file_selected"]

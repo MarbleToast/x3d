@@ -18,12 +18,11 @@ const BEAM_THICKNESS_MODIFIER := 1.0
 @export var element_progress: TextureProgressBar
 
 # Aperture info panel, right side
+@export var aperture_info_container: Container
 @export var aperture_info: RichTextLabel
 
 # UI buttons
-@export var toggle_elements: Button
-@export var toggle_beam: Button
-@export var toggle_apertures: Button
+@export var view_menu: PopupMenu
 
 # Web-specific UI
 @export var load_survey_button: Button
@@ -64,6 +63,9 @@ var selected_element_mesh: ElementMeshInstance:
 			old_mat.albedo_color = old_mat.albedo_color / 10.0
 		var new_mat := value.get_active_material(0) as StandardMaterial3D
 		new_mat.albedo_color = new_mat.albedo_color * 10.0
+		
+		aperture_info_container.visible = true
+		
 		aperture_info.text = "[font_size=26]%s[/font_size]\n[color=#fbb]%s[/color]\n[font_size=18]%s[/font_size][color=dodgerblue][url=https://xsuite.readthedocs.io/en/latest/apireference.html#%s]Go to Docs[/url][/color]" % [
 			value.first_slice_name, 
 			value.type, 
@@ -74,23 +76,23 @@ var selected_element_mesh: ElementMeshInstance:
 
 
 func _ready() -> void:
-	toggle_elements.set_pressed_no_signal(true)
-	toggle_elements.toggled.connect(func(val):
-		for m in length_mesh_instances:
-			m.visible = val
-			m.process_mode = Node.PROCESS_MODE_INHERIT if val else Node.PROCESS_MODE_DISABLED
-	)
+	for i in view_menu.item_count - 1:
+		view_menu.set_item_checked(i, true)
 	
-	toggle_beam.set_pressed_no_signal(true)
-	toggle_beam.toggled.connect(func(val):
-		for m in aperture_mesh_instances:
-			m.visible = val
-	)
-	
-	toggle_apertures.set_pressed_no_signal(true)
-	toggle_apertures.toggled.connect(func(val):
-		for m in beam_mesh_instances:
-			m.visible = val
+	view_menu.index_pressed.connect(
+		func (val):
+			view_menu.set_item_checked(val, not view_menu.is_item_checked(val))
+			match val:
+				0: # Elements
+					for m in length_mesh_instances:
+						m.visible = not m.visible
+						m.process_mode = Node.PROCESS_MODE_INHERIT if m.visible else Node.PROCESS_MODE_DISABLED
+				1: # Aperture
+					for m in aperture_mesh_instances:
+						m.visible = not m.visible
+				2: # Twiss
+					for m in beam_mesh_instances:
+						m.visible = not m.visible
 	)
 
 	_connect_signals()

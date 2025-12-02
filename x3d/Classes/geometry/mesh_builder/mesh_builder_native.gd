@@ -5,8 +5,9 @@ const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep me
 
 var survey_data: Array[Dictionary]:
 	set(value):
-		survey_data = value
-		true_curve_length = value[-1].s + value[-1].length
+		if not value.is_empty():
+			survey_data = value
+			true_curve_length = value[-1].s + value[-1].length
 
 var aperture_path: String
 var twiss_path: String

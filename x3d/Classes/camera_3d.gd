@@ -5,6 +5,8 @@ extends Camera3D
 @export var movement_smoothing: float = 0.15
 @export var rotation_smoothing: float = 0.15
 
+@export var camera_type_toggle: Button
+
 var _initial_position: Vector3 = position
 var _initial_rotation: Vector3 = rotation
 var _direction: Vector3 = Vector3.ZERO
@@ -27,6 +29,11 @@ var _freelook_enabled: bool = false
 
 var euler_rotation: Vector3 = rotation
 var target_euler: Vector3 = rotation
+
+
+func _ready() -> void:
+	camera_type_toggle.toggled.connect(_on_camera_type_toggled)
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if do_input_handling:
@@ -110,5 +117,8 @@ func reset_position() -> void:
 	_vel_multiplier = 4.0
 
 
-func _on_camera_options_item_selected(index: int) -> void:
-	projection = [ProjectionType.PROJECTION_PERSPECTIVE, ProjectionType.PROJECTION_ORTHOGONAL][index]
+func _on_camera_type_toggled(toggled_to_ortho: bool) -> void:
+	var val := int(toggled_to_ortho)
+	camera_type_toggle.tooltip_text = ["Change to Orthographic View", "Change to Perspective View"][val]
+	camera_type_toggle.icon = [preload("uid://dvwshjc7ohr1a"), preload("uid://cm3la0soh1yym")][val]
+	projection = [ProjectionType.PROJECTION_PERSPECTIVE, ProjectionType.PROJECTION_ORTHOGONAL][val]

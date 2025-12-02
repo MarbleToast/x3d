@@ -25,11 +25,17 @@ OBJExporter="*res://addons/obj_exporter/OBJExporter.tscn"
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
 window/per_pixel_transparency/allowed=true
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/obj_exporter/plugin.cfg")
+
+[gui]
+
+theme/custom="uid://chvjwyc2cxl86"
+theme/custom_font="uid://c7riy0rvb8qa0"
 
 [input]
 
