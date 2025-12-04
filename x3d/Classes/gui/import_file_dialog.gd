@@ -20,7 +20,6 @@ func setup_web_loading() -> void:
 	
 	web_loader = DataLoaderWeb.new()
 	
-	# Connect signals
 	web_loader.loading_complete.connect(_on_file_selected)
 	web_loader.loading_error.connect(_on_loading_error)
 

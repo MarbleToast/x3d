@@ -4,9 +4,9 @@ extends RefCounted
 
 # ====================== Constants
 const BEAM_ELLIPSE_RESOLUTION := 20
-const TORUS_SCALE_FACTOR := 1.0
 const COLLIDER_CURVATURE_THRESHOLD := 0.1
 
+## Defines the mesh generation options for each ElementType.
 const ELEMENT_DIMENSIONS := {
 	Drift = { width = 0.2, height = 0.2, type = "box" },
 	DriftSlice = { width = 0.2, height = 0.2, type = "box" },
@@ -54,38 +54,36 @@ func get_base_material(base_material: Material, colour: Color) -> Material:
 
 
 func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
-	var key := "%.4f_%.4f_%.4f" % [psi, theta, phi]
+	var key := "%.4f_%.4f_%.4f" % [psi, theta, phi] # Decimal length chosen roughly - 6 has no hits, 3 causes collisions
 	if not _basis_cache.has(key):
 		_basis_cache[key] = Basis.from_euler(Vector3(psi, theta, phi), EULER_ORDER_XYZ)
 	return _basis_cache[key]
 
 
 # ===================== Mesh Geometry Utilities
-func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Array[Vector2]:
+func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: float = 1.0) -> Dictionary:
 	var twiss := DataLoader.parse_twiss_line(twiss_line)
 	if not twiss:
-		return []
-		
-	var res: Array[Vector2]
+		return {}
 	
 	var key := "%s_%s" % [twiss.position, twiss.sigma]
-	if _ring_cache.has(key):
-		res.assign(_ring_cache[key])
-		return res
-
-	var pts: Array[Vector2] = []
-	var center: Vector2 = twiss.position
-	var sigma: Vector2 = twiss.sigma
-	var step := TAU / float(BEAM_ELLIPSE_RESOLUTION)
 	
-	for i in BEAM_ELLIPSE_RESOLUTION:
-		var angle := i * step
-		pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
-	
-	_ring_cache[key] = pts.map(func(v): return v * thickness_modifier)
+	if not _ring_cache.has(key):
+		var pts: Array[Vector2] = []
+		var center: Vector2 = twiss.position
+		var sigma: Vector2 = twiss.sigma
+		var step := TAU / float(BEAM_ELLIPSE_RESOLUTION)
+		
+		for i in BEAM_ELLIPSE_RESOLUTION:
+			var angle := i * step
+			pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
+			
+		_ring_cache[key] = pts.map(func(v): return v * thickness_modifier)
 
-	res.assign(_ring_cache[key])
-	return res
+	return {
+		points = _ring_cache[key],
+		s = twiss.s
+	}
 
 
 func calculate_curvature(
@@ -96,8 +94,7 @@ func calculate_curvature(
 	var start_tangent := start_rotation.z
 	var end_tangent := end_rotation.z
 	var bend_angle := start_tangent.angle_to(end_tangent)
-	var arc_length := length * TORUS_SCALE_FACTOR
-	return min(bend_angle / max(arc_length, 0.1), 1.0)
+	return min(bend_angle / max(length, 0.1), 1.0)
 
 
 # ===================== Mesh Creation Methods
@@ -157,33 +154,33 @@ func _calculate_element_position(slice: Dictionary, start_rotation: Basis, end_r
 	var end_tangent := end_rotation.z
 	var rotation_axis := start_tangent.cross(end_tangent)
 	var bend_angle := start_tangent.angle_to(end_tangent)
-	var arc_length: float = slice.length * TORUS_SCALE_FACTOR
 	
 	if bend_angle < 1e-6 or rotation_axis.length_squared() < 1e-12:
-		return slice.position + start_tangent * (arc_length * 0.5)
+		return slice.position + start_tangent * (slice.length * 0.5)
 	else:
 		rotation_axis = rotation_axis.normalized()
-		var radius := arc_length / bend_angle
+		var radius: float = slice.length / bend_angle
 		var to_center := start_tangent.cross(rotation_axis).normalized() * radius
 		var mid_angle := bend_angle / 2.0
 		var mid_to_center := to_center.rotated(rotation_axis, mid_angle)
 		return slice.position + (mid_to_center - to_center)
 
 
-func _stitch_rings(prev_verts: Array[Vector3], curr_verts: Array[Vector3]) -> PackedVector3Array:
+func _stitch_rings(prev_verts: Array[Vector3], curr_verts: Array[Vector3], affine_inverse: Transform3D) -> PackedVector3Array:
 	var num_verts := curr_verts.size()
 	var verts := PackedVector3Array()
 	verts.resize(num_verts * 6)
 	var k := 0
 	for j in num_verts:
 		var jn := (j + 1) % num_verts
-		verts[k] = prev_verts[j]
-		verts[k+1] = prev_verts[jn]
-		verts[k+2] = curr_verts[j]
-		verts[k+3] = prev_verts[jn]
-		verts[k+4] = curr_verts[jn]
-		verts[k+5] = curr_verts[j]
+		verts[k] = affine_inverse * prev_verts[j]
+		verts[k+1] = affine_inverse * prev_verts[jn]
+		verts[k+2] = affine_inverse * curr_verts[j]
+		verts[k+3] = affine_inverse * prev_verts[jn]
+		verts[k+4] = affine_inverse * curr_verts[jn]
+		verts[k+5] = affine_inverse * curr_verts[j]
 		k += 6
+	
 	return verts
 
 
@@ -223,6 +220,23 @@ func _add_multipole_kick(
 		static_body_callback.call(kick_body)
 
 
+func _finalize_mesh_chunk(
+	st: SurfaceTool, 
+	chunk_transform: Transform3D,
+	chunk_callback: Callable
+) -> void:
+	var mesh := st.commit()
+	if mesh.get_surface_count() == 0:
+		return
+	
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.mesh = mesh
+	mesh_instance.transform = chunk_transform
+	
+	if chunk_callback.is_valid():
+		chunk_callback.call(mesh_instance)
+
+
 @abstract func build_box_meshes(
 	aperture_material: Material,
 	progress_callback: Callable = Callable(),
@@ -231,11 +245,13 @@ func _add_multipole_kick(
 ) -> void
 
 @abstract func build_beam_mesh(
-	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh
+	get_points_func: Callable,  # (line: PackedStringArray) -> Dictionary
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void
 
 @abstract func build_aperture_mesh(
-	get_points_func: Callable,  # (line: PackedStringArray) -> Array[Vector2]
-	progress_callback: Callable = Callable()
-) -> ArrayMesh
+	get_points_func: Callable,  # (line: PackedStringArray) -> Dictionary
+	progress_callback: Callable = Callable(),
+	chunk_callback: Callable = Callable()
+) -> void

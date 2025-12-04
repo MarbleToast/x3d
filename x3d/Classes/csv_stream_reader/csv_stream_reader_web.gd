@@ -10,11 +10,11 @@ var error_callback: JavaScriptObject
 
 var _current_file: String = ""
 var _total_lines: int = 0
-var _batch_buffer: Dictionary = {}  # batch_start -> Array[String]
+var _batch_buffer: Dictionary = {}  # batch_start -> Array[Array[String]]
 var _batch_access_order: Array = []  # Track access order for LRU eviction
 var _last_batch_start: int = -1
 
-const BATCH_SIZE: int = 75 # Each batch has 100 lines
+const BATCH_SIZE: int = 20 # Each batch has 100 lines
 const MAX_CACHED_BATCHES: int = 2  # Keep only 10 batches in memory
 
 func _init() -> void:
@@ -49,8 +49,8 @@ func get_line(line_index: int) -> PackedStringArray:
 	if not _batch_buffer.has(batch_start):
 		_load_batch(batch_start)
 
-	var batch = _batch_buffer.get(batch_start, null)
-	if batch:
+	var batch: Array = _batch_buffer.get(batch_start, [])
+	if len(batch) > 0:
 		var line_in_batch = line_index - batch_start
 		if line_in_batch >= 0 and line_in_batch < batch.size():
 			return PackedStringArray(batch[line_in_batch])
@@ -85,15 +85,20 @@ func _load_batch(batch_start: int) -> void:
 	
 	var data = _js_interface.getLineBatch(_current_file, batch_start, batch_size)
 	if data:
+		
 		# Evict oldest batch if cache is full
 		while _batch_buffer.size() >= MAX_CACHED_BATCHES:
 			var oldest_batch = _batch_access_order.pop_front()
 			_batch_buffer.erase(oldest_batch)
-			
-		_batch_buffer[batch_start] = JSON.parse_string(data)
+		
+		var parsed = JSON.parse_string(data)
+		if parsed == null or not parsed is Array:
+			print("Batch %s parsed as something weird: %s" % [batch_start, parsed])
+			return
+		
+		_batch_buffer[batch_start] = parsed
 		_batch_access_order.append(batch_start)
 		_last_batch_start = batch_start
-
 
 
 func _on_file_selected(args: Array) -> void:
@@ -169,7 +174,7 @@ function godotCSVStreamReaderInit() {
 		},
 		
 		getLine: (fileName, lineIndex) => {
-			const fileData = csvFiles[fileName];
+			const fileData = window.csvFiles[fileName];
 			if (!fileData || lineIndex < 0 || lineIndex >= fileData.length) {
 				return null;
 			}
@@ -177,7 +182,7 @@ function godotCSVStreamReaderInit() {
 		},
 		
 		getLineBatch: (fileName, startIndex, batchSize) => {
-			const fileData = csvFiles[fileName];
+			const fileData = window.csvFiles[fileName];
 			if (!fileData) {
 				return null;
 			}
@@ -189,7 +194,7 @@ function godotCSVStreamReaderInit() {
 		
 		closeFile: (fileName) => {
 			console.log("Closing file:", fileName);
-			delete csvFiles[fileName];
+			delete window.csvFiles[fileName];
 		}
 	};
 	
