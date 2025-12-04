@@ -4,9 +4,9 @@ extends RefCounted
 
 # ====================== Constants
 const BEAM_ELLIPSE_RESOLUTION := 20
-const TORUS_SCALE_FACTOR := 1.0
 const COLLIDER_CURVATURE_THRESHOLD := 0.1
 
+## Defines the mesh generation options for each ElementType.
 const ELEMENT_DIMENSIONS := {
 	Drift = { width = 0.2, height = 0.2, type = "box" },
 	DriftSlice = { width = 0.2, height = 0.2, type = "box" },
@@ -54,7 +54,7 @@ func get_base_material(base_material: Material, colour: Color) -> Material:
 
 
 func get_cached_basis(psi: float, theta: float, phi: float) -> Basis:
-	var key := "%.4f_%.4f_%.4f" % [psi, theta, phi]
+	var key := "%.4f_%.4f_%.4f" % [psi, theta, phi] # Decimal length chosen roughly - 6 has no hits, 3 causes collisions
 	if not _basis_cache.has(key):
 		_basis_cache[key] = Basis.from_euler(Vector3(psi, theta, phi), EULER_ORDER_XYZ)
 	return _basis_cache[key]
@@ -94,8 +94,7 @@ func calculate_curvature(
 	var start_tangent := start_rotation.z
 	var end_tangent := end_rotation.z
 	var bend_angle := start_tangent.angle_to(end_tangent)
-	var arc_length := length * TORUS_SCALE_FACTOR
-	return min(bend_angle / max(arc_length, 0.1), 1.0)
+	return min(bend_angle / max(length, 0.1), 1.0)
 
 
 # ===================== Mesh Creation Methods
@@ -155,13 +154,12 @@ func _calculate_element_position(slice: Dictionary, start_rotation: Basis, end_r
 	var end_tangent := end_rotation.z
 	var rotation_axis := start_tangent.cross(end_tangent)
 	var bend_angle := start_tangent.angle_to(end_tangent)
-	var arc_length: float = slice.length * TORUS_SCALE_FACTOR
 	
 	if bend_angle < 1e-6 or rotation_axis.length_squared() < 1e-12:
-		return slice.position + start_tangent * (arc_length * 0.5)
+		return slice.position + start_tangent * (slice.length * 0.5)
 	else:
 		rotation_axis = rotation_axis.normalized()
-		var radius := arc_length / bend_angle
+		var radius: float = slice.length / bend_angle
 		var to_center := start_tangent.cross(rotation_axis).normalized() * radius
 		var mid_angle := bend_angle / 2.0
 		var mid_to_center := to_center.rotated(rotation_axis, mid_angle)
@@ -227,10 +225,6 @@ func _finalize_mesh_chunk(
 	chunk_transform: Transform3D,
 	chunk_callback: Callable
 ) -> void:
-	# st.index()
-	# st.generate_normals()
-	# st.optimize_indices_for_cache()
-	
 	var mesh := st.commit()
 	if mesh.get_surface_count() == 0:
 		return

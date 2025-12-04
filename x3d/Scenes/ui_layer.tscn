@@ -1,10 +1,7 @@
-[gd_scene load_steps=10 format=3 uid="uid://qvf5dco2fl7e"]
+[gd_scene load_steps=7 format=3 uid="uid://qvf5dco2fl7e"]
 
 [ext_resource type="Texture2D" uid="uid://dvwshjc7ohr1a" path="res://Assets/401926-200.png" id="1_gom75"]
 [ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="1_sw0fj"]
-[ext_resource type="Script" uid="uid://bhdki27n26nsy" path="res://Classes/gui/edit_element_button.gd" id="2_gom75"]
-[ext_resource type="Script" uid="uid://bk0ypoxp0lbdv" path="res://Scenes/edit_element_menu_button.gd" id="3_fp1jp"]
-[ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://Classes/gui/import_file_dialog.gd" id="4_4efk5"]
 [ext_resource type="Script" uid="uid://d4d7s226i8aau" path="res://Scenes/help_panel.gd" id="4_fp1jp"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fp1jp"]
@@ -150,6 +147,7 @@ stretch_margin_top = 50
 texture_progress = ExtResource("1_sw0fj")
 
 [node name="PanelContainer3" type="MarginContainer" parent="ProgressContainers"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 0
 
@@ -197,14 +195,6 @@ size_flags_vertical = 3
 bbcode_enabled = true
 metadata/_edit_use_anchors_ = true
 
-[node name="EditElementButton" type="Button" parent="ApertureInfoContainer" node_paths=PackedStringArray("edit_element_menu")]
-visible = false
-layout_mode = 2
-toggle_mode = true
-text = "Edit Element"
-script = ExtResource("2_gom75")
-edit_element_menu = NodePath("../../EditElementMenu")
-
 [node name="PanelContainer" type="PopupPanel" parent="."]
 oversampling_override = 1.0
 initial_position = 1
@@ -230,153 +220,4 @@ In orthographic mode, scroll to change object size"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EditElementMenu" type="PanelContainer" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -270.5
-offset_top = -118.0
-offset_right = 270.5
-offset_bottom = 118.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="EditElementMenu"]
-layout_mode = 2
-theme_override_constants/margin_left = 50
-theme_override_constants/margin_top = 50
-theme_override_constants/margin_right = 50
-theme_override_constants/margin_bottom = 50
-
-[node name="VBoxContainer" type="VBoxContainer" parent="EditElementMenu/MarginContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Label" type="RichTextLabel" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-bbcode_enabled = true
-text = "Position"
-fit_content = true
-scroll_active = false
-
-[node name="Label2" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "X"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditX" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Label3" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Y"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditY" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Label4" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Z"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditZ" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="HBoxContainer" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-text = "Rotation"
-
-[node name="Label2" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "ψ"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditPsi" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Label3" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "θ"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditTheta" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Label4" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "ɸ"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LineEditPhi" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="HBoxContainer3" type="HBoxContainer" parent="EditElementMenu/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-text = "Length"
-
-[node name="LineEditLength" type="SpinBox" parent="EditElementMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="RebuildMesh" type="Button" parent="EditElementMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("x", "y", "z", "psi", "theta", "phi", "length")]
-layout_mode = 2
-toggle_mode = true
-text = "Rebuild Mesh"
-script = ExtResource("3_fp1jp")
-x = NodePath("../HBoxContainer2/LineEditX")
-y = NodePath("../HBoxContainer2/LineEditY")
-z = NodePath("../HBoxContainer2/LineEditZ")
-psi = NodePath("../HBoxContainer/LineEditPsi")
-theta = NodePath("../HBoxContainer/LineEditTheta")
-phi = NodePath("../HBoxContainer/LineEditPhi")
-length = NodePath("../HBoxContainer3/LineEditLength")
-
-[node name="FileDialog" type="FileDialog" parent="EditElementMenu"]
-oversampling_override = 1.0
-title = "Open a File"
-initial_position = 1
-file_mode = 0
-access = 2
-filters = PackedStringArray("*.csv,*.tfs")
-use_native_dialog = true
-script = ExtResource("4_4efk5")
-
 [connection signal="index_pressed" from="HBoxContainer/MenuBar/PopupMenuHelp" to="PanelContainer" method="_on_popup_menu_help_index_pressed"]
-[connection signal="toggled" from="ApertureInfoContainer/EditElementButton" to="ApertureInfoContainer/EditElementButton" method="_on_toggled"]
-[connection signal="pressed" from="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_pressed"]
-[connection signal="visibility_changed" from="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" to="EditElementMenu/MarginContainer/VBoxContainer/RebuildMesh" method="_on_visibility_changed"]
-[connection signal="file_selected" from="EditElementMenu/FileDialog" to="EditElementMenu/FileDialog" method="_on_file_selected"]

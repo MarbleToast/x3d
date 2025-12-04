@@ -18,7 +18,7 @@ func _init() -> void:
 	_is_web = OS.has_feature("web")
 	
 	if _is_web:
-		print("Web, initialising WebDataLoader.")
+		print("Web, instance %s, initialising WebDataLoader." % get_instance_id())
 		survey_reader = CSVStreamReader.new()
 		apertures_reader = CSVStreamReader.new()
 		twiss_reader = CSVStreamReader.new()
@@ -62,10 +62,12 @@ func get_survey_line_raw(index: int) -> PackedStringArray:
 
 func get_survey_line(index: int, column_map: Dictionary) -> Dictionary:
 	if not _is_web:
+		push_warning("Trying to use DataLoaderWeb when not on the web.")
 		return {}
 	
 	var line := survey_reader.get_line(index)
 	if line.is_empty():
+		push_warning("Line %s is empty in survey file." % index)
 		return {}
 	
 	return DataLoader.parse_survey_line(line, column_map)

@@ -1,7 +1,7 @@
 class_name MeshBuilderWeb
 extends MeshBuilderBase
 
-const SWEEP_CHUNK_VERTEX_LIMIT: int = 32000 # Max vertices per chunk of sweep mesh
+const SWEEP_CHUNK_VERTEX_LIMIT: int = 64000 # Max vertices per chunk of sweep mesh
 
 var web_loader: DataLoaderWeb
 
@@ -40,24 +40,36 @@ func get_transform_at_s(global_s: float) -> Transform3D:
 	var i := _last_survey_index
 
 	while i < survey_count - 1:
-		if s < web_loader.get_survey_line(i + 1, column_map).s:
+		var next_slice := web_loader.get_survey_line(i + 1, column_map)
+		if "s" not in next_slice:
+			i += 1
+			push_warning("`s` couldn't be found in %s." % next_slice)
+			continue
+		if s < next_slice.s:
 			break
 		i += 1
-
+		
 	while i > 0:
 		var curr_slice := web_loader.get_survey_line(i, column_map)
+		if not curr_slice:
+			i -= 1
+			continue
 		if s >= curr_slice.s:
 			break
 		i -= 1
 
 	if i == 0:
 		var first_slice := web_loader.get_survey_line(0, column_map)
-		if s < first_slice.s:
+		if first_slice and s < first_slice.s:
 			i = survey_count - 1
 
 	_last_survey_index = i
 	
 	var slice := web_loader.get_survey_line(i, column_map)
+	if not ("s" in slice and "length" in slice and "psi" in slice and "theta" in slice and "phi" in slice and "position" in slice):
+		print("Invalid survey slice at index %d; returning identity transform." % i)
+		return Transform3D.IDENTITY
+	
 	var local_s: float = s - slice.s
 	if local_s < 0.0:
 		local_s += true_curve_length
@@ -68,9 +80,13 @@ func get_transform_at_s(global_s: float) -> Transform3D:
 	var start_pos: Vector3 = slice.position
 	
 	var next_i := (i + 1) % survey_count
-	var next_slice := web_loader.get_survey_line(next_i, column_map)
-	var end_basis := get_cached_basis(next_slice.psi, next_slice.theta, next_slice.phi)
-	var end_pos: Vector3 = next_slice.position
+	var next_slice_mod := web_loader.get_survey_line(next_i, column_map)
+	if not ("psi" in next_slice_mod and "theta" in next_slice_mod and "phi" in next_slice_mod and "position" in next_slice_mod):
+		print("Invalid next survey slice at index %d; returning start transform." % next_i)
+		return Transform3D(start_basis, start_pos)
+	
+	var end_basis := get_cached_basis(next_slice_mod.psi, next_slice_mod.theta, next_slice_mod.phi)
+	var end_pos: Vector3 = next_slice_mod.position
 	
 	var start_trans := Transform3D(start_basis, start_pos)
 	var end_trans := Transform3D(end_basis, end_pos)
@@ -92,6 +108,9 @@ func build_box_meshes(
 	for i in range(survey_count):
 		var slice := web_loader.get_survey_line(i, column_map)
 		if slice.is_empty():
+			continue
+			
+		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
 			continue
 		
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
@@ -115,6 +134,7 @@ func build_box_meshes(
 		mesh_instance.type = slice.element_type
 		mesh_instance.first_slice_name = slice.name
 		mesh_instance.other_info = slice
+		mesh_instance.set_layer_mask_value(2, true)
 		
 		var static_body := StaticBody3D.new()
 		static_body.name = "Box_%d_%s" % [i, slice.element_type]
@@ -169,11 +189,6 @@ func build_sweep_mesh(
 	
 	for i in range(line_count):
 		var data_line: PackedStringArray = get_line_func.call(i)
-		var slice_index := i % survey_count
-		var curr_slice := web_loader.get_survey_line(slice_index, column_map)
-		
-		if curr_slice.is_empty():
-			continue
 		
 		var points_2d: Dictionary = get_points_func.call(data_line)
 		if points_2d.is_empty():

@@ -50,6 +50,11 @@ static func python_list_to_godot_array(arr_str: String) -> Array:
 ## Parses a line of aperture data from an Xsuite survey CSV using the column map
 static func parse_survey_line(line: PackedStringArray, column_map: Dictionary) -> Dictionary:
 	if len(line) < 7:
+		push_warning("Line too short: %s" % line)
+		return {}
+		
+	if not column_map:
+		push_warning("No column map given.")
 		return {}
 	
 	return {
