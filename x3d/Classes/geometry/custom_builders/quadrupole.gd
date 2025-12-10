@@ -24,7 +24,6 @@ static func create(
 	_build_poles(st, length, start_rotation, ap_r, pole_w, tip_w, PI / 4)
 	HollowCylinderBuilder.add_to_surface(st, yoke_inner, yoke_outer, length, start_rotation, 4, PI / 4)
 	
-	st.index()
 	st.generate_normals()
 	return st.commit()
 

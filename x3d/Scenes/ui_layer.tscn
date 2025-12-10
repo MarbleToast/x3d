@@ -1,8 +1,8 @@
 [gd_scene load_steps=7 format=3 uid="uid://qvf5dco2fl7e"]
 
-[ext_resource type="Texture2D" uid="uid://dvwshjc7ohr1a" path="res://Assets/401926-200.png" id="1_gom75"]
-[ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/progress.png" id="1_sw0fj"]
-[ext_resource type="Script" uid="uid://d4d7s226i8aau" path="res://Scenes/help_panel.gd" id="4_fp1jp"]
+[ext_resource type="Texture2D" uid="uid://dvwshjc7ohr1a" path="res://Assets/Images/perspective.png" id="1_gom75"]
+[ext_resource type="Texture2D" uid="uid://c3xnggoyrk44e" path="res://Assets/Images/progress.png" id="1_sw0fj"]
+[ext_resource type="Script" uid="uid://d4d7s226i8aau" path="res://Classes/gui/help_panel.gd" id="4_fp1jp"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fp1jp"]
 content_margin_left = 15.0

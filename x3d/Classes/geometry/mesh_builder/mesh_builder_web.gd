@@ -1,11 +1,9 @@
 class_name MeshBuilderWeb
 extends MeshBuilderBase
 
-const SWEEP_CHUNK_VERTEX_LIMIT: int = 64000 # Max vertices per chunk of sweep mesh
-
 var web_loader: DataLoaderWeb
 
-var true_curve_length: float = 0.0
+var full_curve_length: float = 0.0
 var survey_count: int = 0
 var column_map: Dictionary = {}
 
@@ -22,7 +20,7 @@ func _init_survey_streaming_data() -> void:
 	column_map = DataLoader.parse_survey_header(header)
 	
 	var last_slice := web_loader.get_survey_line(survey_count - 1, column_map)
-	true_curve_length = last_slice.s + last_slice.length
+	full_curve_length = last_slice.s + last_slice.length
 	
 	is_initialising = false
 	survey_data_initialised = true
@@ -35,7 +33,7 @@ func get_transform_at_s(global_s: float) -> Transform3D:
 	if survey_count == 0:
 		return Transform3D.IDENTITY
 	
-	var s := fposmod(global_s, true_curve_length)
+	var s := fposmod(global_s, full_curve_length)
 	
 	var i := _last_survey_index
 
@@ -72,7 +70,7 @@ func get_transform_at_s(global_s: float) -> Transform3D:
 	
 	var local_s: float = s - slice.s
 	if local_s < 0.0:
-		local_s += true_curve_length
+		local_s += full_curve_length
 	
 	var frac := clampf(local_s / slice.length, 0.0, 1.0)
 	
@@ -110,7 +108,7 @@ func build_box_meshes(
 		if slice.is_empty():
 			continue
 			
-		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
+		if slice.element_type in Settings.ELEMENT_BLACKLIST:
 			continue
 		
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
@@ -211,7 +209,7 @@ func build_sweep_mesh(
 			vertex_count += fan.size()
 			
 			# Commit mesh chunk if approaching vertex limit
-			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
+			if vertex_count > Settings.SWEEP_CHUNK_VERTEX_LIMIT - 1000:
 				_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 				st = SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)

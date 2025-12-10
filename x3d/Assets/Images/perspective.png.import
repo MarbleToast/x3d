@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cm3la0soh1yym"
-path="res://.godot/imported/2641415.png-b321c2a0e6c70ef81368b9aa88dddaef.ctex"
+uid="uid://dvwshjc7ohr1a"
+path="res://.godot/imported/perspective.png-a5f28df43e3ae4351d01adc0bbf156c6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/2641415.png"
-dest_files=["res://.godot/imported/2641415.png-b321c2a0e6c70ef81368b9aa88dddaef.ctex"]
+source_file="res://Assets/Images/perspective.png"
+dest_files=["res://.godot/imported/perspective.png-a5f28df43e3ae4351d01adc0bbf156c6.ctex"]
 
 [params]
 

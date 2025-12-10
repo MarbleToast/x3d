@@ -3,36 +3,7 @@
 extends RefCounted
 
 # ====================== Constants
-const BEAM_ELLIPSE_RESOLUTION := 20
-const COLLIDER_CURVATURE_THRESHOLD := 0.1
-
-## Defines the mesh generation options for each ElementType.
-const ELEMENT_DIMENSIONS := {
-	Drift = { width = 0.2, height = 0.2, type = "box" },
-	DriftSlice = { width = 0.2, height = 0.2, type = "box" },
-	Quadrupole = { 
-		type = "quadrupole",
-		width = 0.3, 
-		height = 0.3,
-		aperture_radius = 0.05, 
-		pole_width = 0.08, 
-		pole_tip_width = 0.06, 
-		yoke_inner_radius = 0.2, 
-		yoke_outer_radius = 0.25, 
-		custom = true
-	},
-	Bend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
-	RBend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
-	SimpleThinBend = { width = 0.3, bar_height = 0.1, gap = 0.3, type = "equals" },
-	LimitEllipse = { radius = 0.3, type = "circle" },
-	UniformSolenoid = { radius = 0.3, type = "circle" },
-	Solenoid = { radius = 0.3, type = "circle" },
-	Sextupole = { num_poles = 6, pole_width = 0.12, pole_height = 0.07, pole_radius = 0.3, type = "multipole" },
-	Octupole = { num_poles = 8, pole_width = 0.08, pole_height = 0.05, pole_radius = 0.3, type = "multipole" },
-	Multipole = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
-	MultipoleKick = { num_poles = 10, pole_width = 0.07, pole_height = 0.04, pole_radius = 0.3, type = "multipole" },
-	_default = { width = 0.3, height = 0.3, type = "box" }
-}
+const COLLIDER_CURVATURE_THRESHOLD := 0.01
 
 
 # ===================== Caches
@@ -48,7 +19,10 @@ func get_base_material(base_material: Material, colour: Color) -> Material:
 	var key := colour.to_html()
 	if not _base_material_cache.has(key):
 		var mat := base_material.duplicate()
-		mat.albedo_color = colour
+		if mat is StandardMaterial3D:
+			mat.albedo_color = colour
+		elif mat is ShaderMaterial:
+			mat.set_shader_parameter("albedo_colour", colour)
 		_base_material_cache[key] = mat
 	return _base_material_cache[key]
 
@@ -72,9 +46,9 @@ func create_beam_ellipse(twiss_line: PackedStringArray, thickness_modifier: floa
 		var pts: Array[Vector2] = []
 		var center: Vector2 = twiss.position
 		var sigma: Vector2 = twiss.sigma
-		var step := TAU / float(BEAM_ELLIPSE_RESOLUTION)
+		var step := TAU / float(Settings.BEAM_ELLIPSE_RESOLUTION)
 		
-		for i in BEAM_ELLIPSE_RESOLUTION:
+		for i in Settings.BEAM_ELLIPSE_RESOLUTION:
 			var angle := i * step
 			pts.append(center + Vector2(cos(angle) * sigma.x, sin(angle) * sigma.y))
 			
@@ -107,11 +81,11 @@ func create_element_mesh(
 	add_caps: bool = true,
 ) -> Mesh:
 	var curvature := calculate_curvature(start_rotation, end_rotation, length)
-	var key := "%s_%.4f_%.3f" % [type, length, snappedf(curvature, 0.01)]
+	var key := "%s_%.4f_%.2f" % [type, length, snappedf(curvature, 0.01)]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key]
 	
-	var dimensions: Dictionary = ELEMENT_DIMENSIONS.get(type, ELEMENT_DIMENSIONS._default)
+	var dimensions: Dictionary = Settings.ELEMENT_DIMENSIONS.get(type, Settings.ELEMENT_DIMENSIONS._default)
 	var mesh: Mesh
 	
 	if dimensions.has("custom"):
@@ -225,6 +199,7 @@ func _finalize_mesh_chunk(
 	chunk_transform: Transform3D,
 	chunk_callback: Callable
 ) -> void:
+	st.generate_normals()
 	var mesh := st.commit()
 	if mesh.get_surface_count() == 0:
 		return

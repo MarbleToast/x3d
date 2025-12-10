@@ -4,13 +4,6 @@
 extends Node3D
 
 #region =========== Constants and Node Refs
-## How much should we modify the thickness of the aperture? 1.0 = 100% actual size.
-## TODO: This should be able to be set when generating.
-const APERTURE_THICKNESS_MODIFIER := 1.0
-
-## How much should we modify the thickness of the beam? 1.0 = 100% actual size.
-## TODO: This should be able to be set when generating.
-const BEAM_THICKNESS_MODIFIER := 1.0
 
 @export_group("Node References")
 ## The main camera of the scene.
@@ -67,10 +60,13 @@ const BEAM_THICKNESS_MODIFIER := 1.0
 
 @export_group("Materials")
 ## The material used for apertures.
-@export var aperture_material: Material
+@export var default_aperture_material: Material
 
 ## The material used for the beam.
-@export var beam_material: Material
+@export var default_beam_material: Material
+
+## The material used for apertures when wireframe rendering is on.
+@export var wireframe_aperture_material: Material
 #endregion
 
 #region ================ Onreadies
@@ -122,14 +118,36 @@ var aperture_mesh_instances: Array[MeshInstance3D] = []
 ## The array of element meshes. These are positioned and rotated with Euler angles / 3d position.
 var element_mesh_instances: Array[StaticBody3D] = []
 
+## The currently used material for the apertures and elements.
+var aperture_material: Material
+
+## The currently used material for the beam.
+var beam_material: Material
+
 ## The currently selected element mesh, as determined by left click. Shows element info and highlights element.
 var selected_element_mesh: ElementMeshInstance:
 	set(value):
 		if selected_element_mesh:
-			var old_mat := selected_element_mesh.get_active_material(0) as StandardMaterial3D
-			old_mat.albedo_color = old_mat.albedo_color / 10.0
-		var new_mat := value.get_active_material(0) as StandardMaterial3D
-		new_mat.albedo_color = new_mat.albedo_color * 10.0
+			var old_mat := selected_element_mesh.get_active_material(0)
+			
+			# If the material is Standard, then we can interact with it the same way regardless.
+			# However, all shaders need to have an `albedo_colour` param to interact with
+			# In future, we might need more robust material checking
+			match Settings.RENDERER_TYPE:
+				Settings.RendererType.WIREFRAME:
+					old_mat.set_shader_parameter("albedo_colour", old_mat.get_shader_parameter("albedo_colour") / 10)
+					old_mat.set_shader_parameter("wireframe_colour", Color.BLACK)
+				_:
+					old_mat.albedo_color = old_mat.albedo_color / 10.0
+				
+				
+		var new_mat := value.get_active_material(0)
+		match Settings.RENDERER_TYPE:
+				Settings.RendererType.WIREFRAME:
+					new_mat.set_shader_parameter("albedo_colour", new_mat.get_shader_parameter("albedo_colour") * 10)
+					new_mat.set_shader_parameter("wireframe_colour", new_mat.get_shader_parameter("albedo_colour").inverted())
+				_:
+					new_mat.albedo_color = new_mat.albedo_color * 10.0
 		
 		aperture_info_container.visible = true
 		
@@ -187,7 +205,64 @@ func setup() -> void:
 		main_camera.set_cull_mask_value(1, true) # Turned off in editor for Web culling, but we can reenable it. Yay!
 
 	_setup_progress_bars()
+	_setup_materials()
 	start_building()
+
+
+## Reinitialise the values for the progress wheels.
+func _setup_progress_bars() -> void:
+	element_progress_container.visible = true
+	
+	aperture_progress.value = 0
+	beam_progress.value = 0
+	element_progress.value = 0
+
+	if mesh_builder is MeshBuilderWeb:
+		var loader := (mesh_builder as MeshBuilderWeb).web_loader
+		aperture_progress.max_value = loader.get_apertures_count()
+		beam_progress.max_value = loader.get_twiss_count()
+		element_progress.max_value = loader.get_survey_count()
+	else:
+		var survey := (mesh_builder as MeshBuilderNative).survey_data
+		aperture_progress.max_value = survey.size()
+		beam_progress.max_value = survey.size()
+		element_progress.max_value = survey.size()
+
+
+## Sets the correct materials for the renderer type.
+## TODO: Should be using an enum and getting the materials according to enum.
+func _setup_materials() -> void:
+	match Settings.RENDERER_TYPE:
+		Settings.RendererType.WIREFRAME:
+			aperture_material = wireframe_aperture_material
+		_:
+			aperture_material = default_aperture_material
+	
+	beam_material = default_beam_material
+
+
+## Connect each of our signals to their callback functions. Also connects visiblity toggles to their
+## lambda callback.
+func _connect_signals() -> void:
+	aperture_mesh_complete.connect(_on_aperture_mesh_complete)
+	beam_mesh_complete.connect(_on_beam_mesh_complete)
+	element_meshes_complete.connect(_on_element_meshes_complete)
+	web_thread_finished.connect(_on_web_thread_finished)
+	view_menu.index_pressed.connect(
+		func (val):
+			view_menu.set_item_checked(val, not view_menu.is_item_checked(val))
+			match val:
+				0: # Elements
+					for m in element_mesh_instances:
+						m.visible = not m.visible
+						m.process_mode = Node.PROCESS_MODE_INHERIT if m.visible else Node.PROCESS_MODE_DISABLED
+				1: # Aperture
+					for m in aperture_mesh_instances:
+						m.visible = not m.visible
+				2: # Twiss
+					for m in beam_mesh_instances:
+						m.visible = not m.visible
+	)
 
 
 ## If native, multi-thread to generate everything at the same time. If web, thread to have progress,
@@ -226,14 +301,14 @@ func _start_web_sequential_thread(has_apertures: bool, has_twiss: bool) -> void:
 			aperture_material,
 			func(p): element_progress.set_value.call_deferred(p),
 			func(body): _add_box_static_body.call_deferred(body),
-			APERTURE_THICKNESS_MODIFIER
+			Settings.APERTURE_THICKNESS_MODIFIER
 		)
 		element_meshes_complete.emit.call_deferred()
 		
 		if has_apertures:
 			aperture_progress_container.set_deferred("visible", true)
 			mesh_builder.build_aperture_mesh(
-				func(line): return DataLoader.parse_edge_line(line, APERTURE_THICKNESS_MODIFIER),
+				func(line): return DataLoader.parse_edge_line(line, Settings.APERTURE_THICKNESS_MODIFIER),
 				func(p): aperture_progress.set_value.call_deferred(p),
 				_add_aperture_mesh_chunk
 			)
@@ -242,7 +317,7 @@ func _start_web_sequential_thread(has_apertures: bool, has_twiss: bool) -> void:
 		if has_twiss:
 			beam_progress_container.set_deferred("visible", true)
 			mesh_builder.build_beam_mesh(
-				func(line): return mesh_builder.create_beam_ellipse(line, BEAM_THICKNESS_MODIFIER),
+				func(line): return mesh_builder.create_beam_ellipse(line, Settings.APERTURE_THICKNESS_MODIFIER),
 				func(p): beam_progress.set_value.call_deferred(p),
 				_add_twiss_mesh_chunk
 			)
@@ -255,56 +330,12 @@ func _start_web_sequential_thread(has_apertures: bool, has_twiss: bool) -> void:
 	main_camera.reset_position() # Because one might get lost before everything becomes visible
 
 
-## Reinitialise the values for the progress wheels.
-func _setup_progress_bars() -> void:
-	element_progress_container.visible = true
-	
-	aperture_progress.value = 0
-	beam_progress.value = 0
-	element_progress.value = 0
-
-	if mesh_builder is MeshBuilderWeb:
-		var loader := (mesh_builder as MeshBuilderWeb).web_loader
-		aperture_progress.max_value = loader.get_apertures_count()
-		beam_progress.max_value = loader.get_twiss_count()
-		element_progress.max_value = loader.get_survey_count()
-	else:
-		var survey := (mesh_builder as MeshBuilderNative).survey_data
-		aperture_progress.max_value = survey.size()
-		beam_progress.max_value = survey.size()
-		element_progress.max_value = survey.size()
-
-
-## Connect each of our signals to their callback functions. Also connects visiblity toggles to their
-## lambda callback.
-func _connect_signals() -> void:
-	aperture_mesh_complete.connect(_on_aperture_mesh_complete)
-	beam_mesh_complete.connect(_on_beam_mesh_complete)
-	element_meshes_complete.connect(_on_element_meshes_complete)
-	web_thread_finished.connect(_on_web_thread_finished)
-	view_menu.index_pressed.connect(
-		func (val):
-			view_menu.set_item_checked(val, not view_menu.is_item_checked(val))
-			match val:
-				0: # Elements
-					for m in element_mesh_instances:
-						m.visible = not m.visible
-						m.process_mode = Node.PROCESS_MODE_INHERIT if m.visible else Node.PROCESS_MODE_DISABLED
-				1: # Aperture
-					for m in aperture_mesh_instances:
-						m.visible = not m.visible
-				2: # Twiss
-					for m in beam_mesh_instances:
-						m.visible = not m.visible
-	)
-
-
 # ==================== Threading
 func _start_aperture_thread() -> void:
 	aperture_thread = Thread.new()
 	aperture_thread.start(func():
 		mesh_builder.build_aperture_mesh(
-			func(line): return DataLoader.parse_edge_line(line, APERTURE_THICKNESS_MODIFIER),
+			func(line): return DataLoader.parse_edge_line(line, Settings.APERTURE_THICKNESS_MODIFIER),
 			func(p): aperture_progress.set_value.call_deferred(p),
 			_add_aperture_mesh_chunk
 		)
@@ -316,7 +347,7 @@ func _start_beam_thread() -> void:
 	beam_thread = Thread.new()
 	beam_thread.start(func():
 		mesh_builder.build_beam_mesh(
-			func(line): return mesh_builder.create_beam_ellipse(line, BEAM_THICKNESS_MODIFIER),
+			func(line): return mesh_builder.create_beam_ellipse(line, Settings.APERTURE_THICKNESS_MODIFIER),
 			func(p): beam_progress.set_value.call_deferred(p),
 			_add_twiss_mesh_chunk
 		)
@@ -331,7 +362,7 @@ func _start_magnets_thread() -> void:
 			aperture_material,
 			func(p): element_progress.set_value.call_deferred(p),
 			func(body): _add_box_static_body.call_deferred(body),
-			APERTURE_THICKNESS_MODIFIER
+			Settings.APERTURE_THICKNESS_MODIFIER
 		)
 		element_meshes_complete.emit.call_deferred()
 	)

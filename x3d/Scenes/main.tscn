@@ -1,29 +1,25 @@
-[gd_scene load_steps=13 format=3 uid="uid://dhffc1wkr2bjd"]
+[gd_scene load_steps=20 format=3 uid="uid://dhffc1wkr2bjd"]
 
 [ext_resource type="Script" uid="uid://db1ni4brf4at8" path="res://Classes/manager.gd" id="1_jjgbg"]
+[ext_resource type="Material" uid="uid://d0nuyliakicy8" path="res://Assets/Materials/beam_envelope.tres" id="2_344ge"]
 [ext_resource type="Script" uid="uid://dcsja3lej743x" path="res://Classes/camera_3d.gd" id="2_bo1nx"]
 [ext_resource type="Script" uid="uid://7tlova7hhuhn" path="res://Classes/animation/beam_animator.gd" id="3_21xkr"]
+[ext_resource type="Shader" uid="uid://dqbuv8gv4hewt" path="res://Assets/Materials/wireframe.gdshader" id="3_ynf5e"]
 [ext_resource type="PackedScene" uid="uid://qvf5dco2fl7e" path="res://Scenes/ui_layer.tscn" id="4_21xkr"]
 [ext_resource type="Script" uid="uid://gx2fdxxhi1gt" path="res://Classes/gui/import_file_dialog.gd" id="4_jjvhh"]
 [ext_resource type="Script" uid="uid://b87ln10e44lfx" path="res://Classes/gui/import_button.gd" id="4_kry3j"]
+[ext_resource type="Script" uid="uid://di4gx64qubvc" path="res://Classes/gui/settings_menu.gd" id="7_6bp64"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kry3j"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ynf5e"]
 transparency = 1
-cull_mode = 2
-depth_draw_mode = 2
-albedo_color = Color(0.43137255, 0.43137255, 0.43137255, 0.7019608)
-grow_amount = 2.176
-point_size = 5.0
-proximity_fade_distance = 0.05
-distance_fade_max_distance = 1.0
-stencil_flags = 2
-stencil_outline_thickness = 0.046
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8gbba"]
-shading_mode = 0
-albedo_color = Color(1, 0, 1, 1)
-stencil_flags = 2
-stencil_color = Color(0.50966626, 0.21255118, 0.6443313, 1)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hptm8"]
+render_priority = 0
+shader = ExtResource("3_ynf5e")
+shader_parameter/albedo_colour = Color(1, 1, 1, 0.49019608)
+shader_parameter/wireframe_colour = Color(0, 0, 0, 1)
+shader_parameter/line_width = 1.0
+shader_parameter/filtered = true
 
 [sub_resource type="Curve3D" id="Curve3D_344ge"]
 
@@ -48,6 +44,40 @@ ambient_light_energy = 2.0
 reflected_light_source = 1
 tonemap_exposure = 0.8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_21xkr"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 3.0
+bg_color = Color(0.13725491, 0.13725491, 0.13333334, 0.78431374)
+border_width_left = 2
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6bp64"]
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+bg_color = Color(0.74509805, 0.13725491, 0.13333334, 0.78431374)
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_344ge"]
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+bg_color = Color(0.25882354, 0.38431373, 0.25882354, 0.78431374)
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ynf5e"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 3.0
+bg_color = Color(0.2562284, 0.2562289, 0.25005457, 0.78431374)
+border_width_left = 2
+border_color = Color(0.7379152, 0.651171, 0.8793232, 1)
+
 [node name="Scene" type="TextureRect"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -55,7 +85,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-metadata/_edit_horizontal_guides_ = [16.0]
+metadata/_edit_horizontal_guides_ = [16.0, 386.0]
+metadata/_edit_vertical_guides_ = [960.0, 356.0, 1564.0]
 
 [node name="MeshManager" type="Node3D" parent="." node_paths=PackedStringArray("main_camera", "beam_animator", "aperture_progress_container", "beam_progress_container", "element_progress_container", "aperture_progress", "beam_progress", "element_progress", "load_survey_button", "load_apertures_button", "load_twiss_button", "start_build_button", "status_label", "aperture_info_container", "aperture_info", "view_menu")]
 script = ExtResource("1_jjgbg")
@@ -67,16 +98,17 @@ element_progress_container = NodePath("../LoadedLayer/ProgressContainers/PanelCo
 aperture_progress = NodePath("../LoadedLayer/ProgressContainers/PanelContainer/PanelContainer/HBoxContainer/ApertureProgress")
 beam_progress = NodePath("../LoadedLayer/ProgressContainers/PanelContainer2/PanelContainer/HBoxContainer2/BeamProgress")
 element_progress = NodePath("../LoadedLayer/ProgressContainers/PanelContainer3/PanelContainer/HBoxContainer3/ElementProgress")
-load_survey_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey")
-load_apertures_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture")
-load_twiss_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
-start_build_button = NodePath("../ImportMenu/MarginContainer/VBoxContainer/Import")
-status_label = NodePath("../ImportMenu/MarginContainer/VBoxContainer/ErrorText")
+load_survey_button = NodePath("../ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey")
+load_apertures_button = NodePath("../ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture")
+load_twiss_button = NodePath("../ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss")
+start_build_button = NodePath("../ImportLayer/ImportMenu/MarginContainer/VBoxContainer/Import")
+status_label = NodePath("../ImportLayer/ImportMenu/MarginContainer/VBoxContainer/ErrorText")
 aperture_info_container = NodePath("../LoadedLayer/ApertureInfoContainer")
 aperture_info = NodePath("../LoadedLayer/ApertureInfoContainer/PanelContainer/ApertureInfo")
 view_menu = NodePath("../LoadedLayer/HBoxContainer/MenuBar/PopupMenuView")
-aperture_material = SubResource("StandardMaterial3D_kry3j")
-beam_material = SubResource("StandardMaterial3D_8gbba")
+default_aperture_material = SubResource("StandardMaterial3D_ynf5e")
+default_beam_material = ExtResource("2_344ge")
+wireframe_aperture_material = SubResource("ShaderMaterial_hptm8")
 
 [node name="Timer" type="Timer" parent="MeshManager"]
 wait_time = 0.1
@@ -105,28 +137,39 @@ fill_duration = 20.0
 visible = false
 layout_mode = 1
 
-[node name="ImportMenu" type="PanelContainer" parent="."]
+[node name="ImportLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ImportMenu" type="PanelContainer" parent="ImportLayer"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -400.0
-offset_top = -150.0
-offset_right = 400.0
-offset_bottom = 150.0
+offset_left = -604.0
+offset_top = -154.5
+offset_right = 196.0
+offset_bottom = 124.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_21xkr")
 
-[node name="CloseMenuButton" type="Button" parent="ImportMenu"]
+[node name="CloseMenuButton" type="Button" parent="ImportLayer/ImportMenu"]
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_6bp64")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_6bp64")
 text = "X"
 
-[node name="MarginContainer" type="MarginContainer" parent="ImportMenu"]
+[node name="MarginContainer" type="MarginContainer" parent="ImportLayer/ImportMenu"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 50
@@ -134,13 +177,14 @@ theme_override_constants/margin_top = 50
 theme_override_constants/margin_right = 50
 theme_override_constants/margin_bottom = 50
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ImportMenu/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ImportLayer/ImportMenu/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Label" type="RichTextLabel" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Label" type="RichTextLabel" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 bbcode_enabled = true
@@ -148,82 +192,86 @@ text = "Survey File [color=RED]*[/color]"
 fit_content = true
 scroll_active = false
 
-[node name="LineEditSurvey" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="LineEditSurvey" type="LineEdit" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BrowseSurvey" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="BrowseSurvey" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 text = "Browse..."
 
-[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "and"
 horizontal_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Aperture File"
 
-[node name="LineEditAperture" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="LineEditAperture" type="LineEdit" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RemoveAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="RemoveAperture" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
 visible = false
 layout_mode = 2
 text = "Clear"
 
-[node name="BrowseAperture" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="BrowseAperture" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Browse..."
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="ImportMenu/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Label" type="Label" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Twiss File"
 
-[node name="LineEditTwiss" type="LineEdit" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="LineEditTwiss" type="LineEdit" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RemoveTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="RemoveTwiss" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 visible = false
 layout_mode = 2
 text = "Clear"
 
-[node name="BrowseTwiss" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="BrowseTwiss" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 text = "Browse..."
 
-[node name="Import" type="Button" parent="ImportMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("mesh_manager", "main_camera", "line_edit_survey", "line_edit_aperture", "line_edit_twiss", "visualiser_canvas_layer", "menu_container", "error_text")]
+[node name="Import" type="Button" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer" node_paths=PackedStringArray("mesh_manager", "main_camera", "line_edit_survey", "line_edit_aperture", "line_edit_twiss", "renderer_type", "element_blacklist", "visualiser_canvas_layer", "menu_container", "error_text")]
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_344ge")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_344ge")
 text = "Import"
 script = ExtResource("4_kry3j")
-mesh_manager = NodePath("../../../../MeshManager")
-main_camera = NodePath("../../../../MeshManager/Camera3D")
+mesh_manager = NodePath("../../../../../MeshManager")
+main_camera = NodePath("../../../../../MeshManager/Camera3D")
 line_edit_survey = NodePath("../HBoxContainer2/LineEditSurvey")
 line_edit_aperture = NodePath("../HBoxContainer/LineEditAperture")
 line_edit_twiss = NodePath("../HBoxContainer3/LineEditTwiss")
-visualiser_canvas_layer = NodePath("../../../../LoadedLayer")
-menu_container = NodePath("../../..")
+renderer_type = NodePath("../../../../SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer2/OptionRenderer")
+element_blacklist = NodePath("../../../../SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer/TextEditBlacklist")
+visualiser_canvas_layer = NodePath("../../../../../LoadedLayer")
+menu_container = NodePath("../../../..")
 error_text = NodePath("../ErrorText")
 
-[node name="ErrorText" type="RichTextLabel" parent="ImportMenu/MarginContainer/VBoxContainer"]
+[node name="ErrorText" type="RichTextLabel" parent="ImportLayer/ImportMenu/MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="FileDialog" type="FileDialog" parent="ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss", "remove_aperture", "remove_twiss", "status_label")]
+[node name="FileDialog" type="FileDialog" parent="ImportLayer/ImportMenu" node_paths=PackedStringArray("line_edit_aperture", "line_edit_survey", "line_edit_twiss", "remove_aperture", "remove_twiss", "status_label")]
 unique_name_in_owner = true
 oversampling_override = 1.0
 title = "Open a File"
@@ -240,16 +288,157 @@ remove_aperture = NodePath("../MarginContainer/VBoxContainer/HBoxContainer/Remov
 remove_twiss = NodePath("../MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss")
 status_label = NodePath("../MarginContainer/VBoxContainer/ErrorText")
 
+[node name="SettingsMenu" type="PanelContainer" parent="ImportLayer" node_paths=PackedStringArray("general_settings_container", "aperture_beam_settings_container")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 195.5
+offset_top = -154.5
+offset_right = 602.5
+offset_bottom = 124.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ynf5e")
+script = ExtResource("7_6bp64")
+general_settings_container = NodePath("MarginContainer/HBoxContainer/GeneralSettings")
+aperture_beam_settings_container = NodePath("MarginContainer/HBoxContainer/ApertureBeamSettings")
+
+[node name="TabBar" type="TabBar" parent="ImportLayer/SettingsMenu"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 0
+current_tab = 0
+tab_count = 2
+tab_0/title = "General"
+tab_1/title = "Apertures and Beam"
+
+[node name="MarginContainer" type="MarginContainer" parent="ImportLayer/SettingsMenu"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer"]
+layout_mode = 2
+
+[node name="GeneralSettings" type="VBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings"]
+layout_mode = 2
+
+[node name="Label" type="RichTextLabel" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer2"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+text = "Renderer"
+fit_content = true
+scroll_active = false
+
+[node name="OptionRenderer" type="OptionButton" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+selected = 0
+item_count = 2
+popup/item_0/text = "Default"
+popup/item_0/id = 0
+popup/item_1/text = "Wireframe"
+popup/item_1/id = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Label" type="Label" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+text = "Element Blacklist
+(comma-separated)"
+autowrap_mode = 3
+
+[node name="TextEditBlacklist" type="TextEdit" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/GeneralSettings/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LimitEllipse, LimitRectEllipse, LimitPolygon"
+wrap_mode = 1
+
+[node name="ApertureBeamSettings" type="VBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings"]
+layout_mode = 2
+
+[node name="Label" type="RichTextLabel" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer2"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="LineEditSurvey" type="LineEdit" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Aperture File"
+
+[node name="LineEditAperture" type="LineEdit" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RemoveAperture" type="Button" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer"]
+visible = false
+layout_mode = 2
+text = "Clear"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer3"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Twiss File"
+
+[node name="LineEditTwiss" type="LineEdit" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RemoveTwiss" type="Button" parent="ImportLayer/SettingsMenu/MarginContainer/HBoxContainer/ApertureBeamSettings/HBoxContainer3"]
+visible = false
+layout_mode = 2
+text = "Clear"
+
 [connection signal="timeout" from="MeshManager/Timer" to="MeshManager" method="_on_timer_timeout"]
-[connection signal="index_pressed" from="LoadedLayer/HBoxContainer/MenuBar/PopupMenuFile" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_popup_menu_file_index_pressed"]
+[connection signal="index_pressed" from="LoadedLayer/HBoxContainer/MenuBar/PopupMenuFile" to="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_popup_menu_file_index_pressed"]
 [connection signal="meta_clicked" from="LoadedLayer/ApertureInfoContainer/PanelContainer/ApertureInfo" to="MeshManager" method="_on_aperture_info_meta_clicked"]
-[connection signal="pressed" from="ImportMenu/CloseMenuButton" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_popup_menu_file_index_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture" to="ImportMenu/FileDialog" method="_on_remove_aperture_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss" to="ImportMenu/FileDialog" method="_on_remove_twiss_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss" to="ImportMenu/FileDialog" method="_on_browse_twiss_pressed"]
-[connection signal="pressed" from="ImportMenu/MarginContainer/VBoxContainer/Import" to="ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_pressed"]
-[connection signal="file_selected" from="ImportMenu/FileDialog" to="ImportMenu/FileDialog" method="_on_file_selected"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/CloseMenuButton" to="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_popup_menu_file_index_pressed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer2/BrowseSurvey" to="ImportLayer/ImportMenu/FileDialog" method="_on_browse_survey_pressed"]
+[connection signal="text_changed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/LineEditAperture" to="ImportLayer/SettingsMenu" method="_on_line_edit_aperture_text_changed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/RemoveAperture" to="ImportLayer/ImportMenu/FileDialog" method="_on_remove_aperture_pressed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer/BrowseAperture" to="ImportLayer/ImportMenu/FileDialog" method="_on_browse_aperture_pressed"]
+[connection signal="text_changed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/LineEditTwiss" to="ImportLayer/SettingsMenu" method="_on_line_edit_twiss_text_changed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/RemoveTwiss" to="ImportLayer/ImportMenu/FileDialog" method="_on_remove_twiss_pressed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/HBoxContainer3/BrowseTwiss" to="ImportLayer/ImportMenu/FileDialog" method="_on_browse_twiss_pressed"]
+[connection signal="pressed" from="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/Import" to="ImportLayer/ImportMenu/MarginContainer/VBoxContainer/Import" method="_on_pressed"]
+[connection signal="file_selected" from="ImportLayer/ImportMenu/FileDialog" to="ImportLayer/ImportMenu/FileDialog" method="_on_file_selected"]
+[connection signal="tab_changed" from="ImportLayer/SettingsMenu/TabBar" to="ImportLayer/SettingsMenu" method="_on_tab_bar_tab_changed"]
 
 [editable path="LoadedLayer"]

@@ -2,11 +2,9 @@ class_name DataLoader
 extends RefCounted
 
 # Aperture and beam constants
-const APERTURE_TORUS_SCALE_FACTOR := 1.0
 const RELATIVISTIC_GAMMA := 7247.364757558866
 const BEAM_EMITTANCE_X := 2.5e-6 / RELATIVISTIC_GAMMA
 const BEAM_EMITTANCE_Y := 2.5e-6 / RELATIVISTIC_GAMMA
-const BEAM_NUM_SIGMAS := 3
 const BEAM_SIGMA_DELTA := 8e-4
 
 
@@ -62,7 +60,7 @@ static func parse_survey_line(line: PackedStringArray, column_map: Dictionary) -
 			float(line[column_map["x"]]), 
 			float(line[column_map["y"]]), 
 			float(line[column_map["z"]])
-		) * APERTURE_TORUS_SCALE_FACTOR,
+		),
 		theta = float(line[column_map["theta"]]),
 		phi = float(line[column_map["phi"]]),
 		psi = float(line[column_map["psi"]]),
@@ -93,7 +91,7 @@ static func parse_twiss_line(line: PackedStringArray) -> Dictionary:
 	return {
 		position = Vector2(x, y),
 		s = s,
-		sigma = BEAM_SIGMA_DELTA * BEAM_NUM_SIGMAS * Vector2(
+		sigma = BEAM_SIGMA_DELTA * Settings.BEAM_NUM_SIGMAS * Vector2(
 			sqrt(BEAM_EMITTANCE_X * beta_x) + absf(dx),
 			sqrt(BEAM_EMITTANCE_Y * beta_y) + absf(dy)
 		)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dvwshjc7ohr1a"
-path="res://.godot/imported/401926-200.png-942750b9e52ad98be6c601d78cd5d0b5.ctex"
+uid="uid://cm3la0soh1yym"
+path="res://.godot/imported/orthographic.png-4532abe22e56a9dea2d47669301feeec.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/401926-200.png"
-dest_files=["res://.godot/imported/401926-200.png-942750b9e52ad98be6c601d78cd5d0b5.ctex"]
+source_file="res://Assets/Images/orthographic.png"
+dest_files=["res://.godot/imported/orthographic.png-4532abe22e56a9dea2d47669301feeec.ctex"]
 
 [params]
 

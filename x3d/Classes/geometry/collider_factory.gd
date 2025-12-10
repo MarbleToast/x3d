@@ -2,7 +2,7 @@ class_name CollisionShapeFactory
 extends RefCounted
 
 static func create_simple_collider(type: String, collision_length: float, thickness_modifier: float) -> Shape3D:
-	var dims: Dictionary = MeshBuilderBase.ELEMENT_DIMENSIONS.get(type, MeshBuilderBase.ELEMENT_DIMENSIONS._default)
+	var dims: Dictionary = Settings.ELEMENT_DIMENSIONS.get(type, Settings.ELEMENT_DIMENSIONS._default)
 	
 	match dims.type:
 		"box":

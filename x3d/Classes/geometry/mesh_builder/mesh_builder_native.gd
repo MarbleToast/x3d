@@ -1,8 +1,6 @@
 class_name MeshBuilderNative
 extends MeshBuilderBase
 
-const SWEEP_CHUNK_VERTEX_LIMIT: int = 65000 # Max vertices per chunk of sweep mesh
-
 var survey_data: Array[Dictionary]:
 	set(value):
 		if not value.is_empty():
@@ -62,7 +60,7 @@ func build_box_meshes(
 
 	for i in range(survey_data.size()):
 		var slice := survey_data[i]
-		if slice.element_type in ["LimitEllipse", "LimitRectEllipse"]:
+		if slice.element_type in Settings.ELEMENT_BLACKLIST:
 			continue
 
 		var start_rotation := get_cached_basis(slice.psi, slice.theta, slice.phi)
@@ -154,7 +152,7 @@ func build_sweep_mesh(
 				st.add_vertex(v)
 			vertex_count += fan.size()
 			
-			if vertex_count > SWEEP_CHUNK_VERTEX_LIMIT - 1000:
+			if vertex_count > Settings.SWEEP_CHUNK_VERTEX_LIMIT - 1000:
 				_finalize_mesh_chunk(st, chunk_transform, chunk_callback)
 				st = SurfaceTool.new()
 				st.begin(Mesh.PRIMITIVE_TRIANGLES)

@@ -24,7 +24,6 @@ static func extrude_cross_sections(
 	else:
 		_extrude_curved_canonical(st, cross_sections_2d, length, bend_angle, segments, add_caps)
 
-	st.index()
 	st.generate_normals()
 	return st.commit()
 

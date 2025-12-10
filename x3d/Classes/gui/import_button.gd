@@ -8,6 +8,10 @@ extends Button
 @export var line_edit_aperture: LineEdit
 @export var line_edit_twiss: LineEdit
 
+@export_group("Settings Input Fields")
+@export var renderer_type: OptionButton
+@export var element_blacklist: TextEdit
+
 @export_group("UI Containers")
 @export var visualiser_canvas_layer: Control
 @export var menu_container: Control
@@ -58,6 +62,8 @@ func handle_pre_setup() -> void:
 	visualiser_canvas_layer.visible = true
 	main_camera.do_input_handling = true
 	
+	_push_settings()
+	
 	if _is_web:
 		_clear_inputs()
 	else:
@@ -68,6 +74,11 @@ func _configure_native_mesh_manager() -> void:
 	mesh_manager.survey_path = line_edit_survey.text
 	mesh_manager.apertures_path = line_edit_aperture.text if FileAccess.file_exists(line_edit_aperture.text) else ""
 	mesh_manager.twiss_path = line_edit_twiss.text if FileAccess.file_exists(line_edit_twiss.text) else ""
+
+
+func _push_settings() -> void:
+	Settings.ELEMENT_BLACKLIST = element_blacklist.text.remove_char(" ".unicode_at(0)).split(",")
+	Settings.RENDERER_TYPE = Settings.RendererType[renderer_type.get_item_text(renderer_type.selected).to_upper()] # This is brittle but whatever
 
 
 func _clear_inputs() -> void:
